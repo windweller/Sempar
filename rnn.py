@@ -153,10 +153,18 @@ class Decoder(object):
         # (batch_size, T, hidden_size)
         return decoder_output
 
+    def set_default_decoder_state_input(self, input_feed, batch_size):
+        default_value = np.zeros([batch_size, self.size])
+        for i in xrange(self.num_layers):
+            input_feed[self.decoder_state_input[i]] = default_value
 
-def rnn_linear(all_states, batch_size, unroll, dim, output_size, scope, reuse=False, return_param=False):
+
+def rnn_linear(all_states, dim, output_size, scope, reuse=False, return_param=False):
     with tf.variable_scope(scope, reuse=reuse) as v_s:
         # all_states: (batch_size, time, hidden_size)
+        doshape = tf.shape(all_states)
+        batch_size, unroll = doshape[0], doshape[1]
+
         flattened = tf.reshape(all_states, [-1, dim])
         result2d = rnn_cell._linear(flattened, output_size=output_size, bias=True)
         result3d = tf.reshape(result2d, tf.pack([batch_size, unroll, -1]))
@@ -190,13 +198,13 @@ def pair_iter(q, batch_size, inp_len, query_len):
                 batched_input.append(pair[0])
                 batched_query.append(pair[1])
 
-        padded_input = padded(batched_input)
+        padded_input = np.array(padded(batched_input), dtype=np.int32)
         input_mask = (padded_input != data_util.PAD_ID).astype(np.int32)
         batched_query = add_sos_eos(batched_query)
-        padded_query = padded(batched_query)
+        padded_query = np.array(padded(batched_query), dtype=np.int32)
         query_mask = (padded_query != data_util.PAD_ID).astype(np.int32)
 
-        yield np.array(padded_input, dtype=np.int32), input_mask, np.array(padded_query, dtype=np.int32), query_mask
+        yield padded_input, input_mask, padded_query, query_mask
         batched_input, batched_query = [], []
 
 
@@ -213,11 +221,11 @@ class Seq2SeqNeuralParser(object):
         self.encoder = encoder
         self.decoder = decoder
 
-        self.inp_tokens = tf.placeholder(tf.int32, shape=[None, self.inp_len])
-        self.inp_mask = tf.placeholder(tf.int32, shape=[None, None])
+        self.inp_tokens = tf.placeholder(tf.int32, shape=[None, None], name="inp_tokens")
+        self.inp_mask = tf.placeholder(tf.int32, shape=[None, None], name="inp_masks")
 
-        self.query_tokens = tf.placeholder(tf.int32, shape=[None, self.query_len])
-        self.query_mask = tf.placeholder(tf.int32, shape=[None, None])
+        self.query_tokens = tf.placeholder(tf.int32, shape=[None, None], name="query_tokens")
+        self.query_mask = tf.placeholder(tf.int32, shape=[None, None], name="query_mask")
 
         self.keep_prob_config = 1.0 - dropout
         self.learning_rate = tf.Variable(float(learning_rate), trainable=False)
@@ -260,15 +268,16 @@ class Seq2SeqNeuralParser(object):
     def setup_loss(self):
         with vs.variable_scope("Logistic"):
             self.outputs = rnn_linear(self.decoder_output,
-                                      self.batch_size,
-                                      self.query_len,
                                       self.decoder.size, output_size=self.vocab_size,
                                       scope="flogits", return_param=False)
+
+            unroll = tf.shape(self.outputs)[1]
+            batch_size = tf.shape(self.outputs)[0]
 
             self.seq_loss = tf.nn.seq2seq.sequence_loss_by_example(
                 [tf.reshape(self.outputs, [-1, self.vocab_size])],
                 [tf.reshape(self.query_tokens, [-1])],
-                [tf.ones([self.batch_size * self.query_len])])
+                [tf.ones(tf.pack([batch_size * unroll]))])  # tf.cast(tf.reshape(self.query_mask, [-1]), tf.float32)
 
             self.loss = tf.reduce_sum(self.seq_loss) / self.batch_size
 
@@ -283,6 +292,8 @@ class Seq2SeqNeuralParser(object):
         input_feed[self.decoder.keep_prob] = self.keep_prob_config
 
         output_feed = [self.updates, self.gradient_norm, self.loss, self.param_norm]
+
+        self.decoder.set_default_decoder_state_input(input_feed, query_tokens.shape[0])
 
         outputs = session.run(output_feed, input_feed)
 
@@ -300,17 +311,18 @@ class Seq2SeqNeuralParser(object):
 
         output_feed = [self.loss]
 
+        self.decoder.set_default_decoder_state_input(input_feed, query_tokens.shape[0])
+
         outputs = session.run(output_feed, input_feed)
 
         return outputs[0]
 
     def validate(self, session, q_valid):
-        valid_costs, valid_lengths = [], []
+        valid_costs = []
         for inp_tokens, inp_mask, query_tokens, query_mask in pair_iter(q_valid, self.batch_size, self.inp_len, self.query_len):
             cost = self.test(session, inp_tokens, inp_mask, query_tokens, query_mask)
-            valid_costs.append(cost)
-            valid_lengths.append(np.sum(query_mask, axis=1))
-        valid_cost = np.sum(np.array(valid_costs, dtype=np.float32) / np.array(valid_lengths, dtype=np.float32)) / float(self.batch_size)
+            valid_costs.append(cost / inp_tokens.shape[0])
+        valid_cost = np.sum(valid_costs) / float(len(valid_costs))
         return valid_cost
 
     # def decode_greedy_batch(self, model, sess, encoder_output, batch_size):
@@ -357,11 +369,13 @@ class Seq2SeqNeuralParser(object):
 
         output_feed = [self.decoder_output]
 
+        self.decoder.set_default_decoder_state_input(input_feed, query_tokens.shape[0])
+
         outputs = session.run(output_feed, input_feed)
 
         return outputs[0]
 
-    def evaluate_answer(self, session, q, sample=500):
+    def evaluate_answer(self, session, q, rev_vocab, sample=500, print_every=250):
         # this is teacher-forcing evaluation, not even greedy decode
         f1 = 0.
         em = 0.
@@ -373,14 +387,25 @@ class Seq2SeqNeuralParser(object):
             decoder_tokens = np.argmax(decoder_output, axis=-1)
 
             # those are batched right now
-            decoder_tokens = np.squeeze(decoder_tokens)
+            decoder_tokens = np.squeeze(decoder_tokens) * query_mask
+            query_tokens = query_tokens * query_mask
             batch_size = inp_tokens.shape[0]
 
+            query_len = np.sum(query_mask, axis=1)
+
             for i in range(batch_size):
-                f1 += f1_score(str(decoder_tokens[i, :]), str(query_tokens[i, :]))
-                em += exact_match_score(str(decoder_tokens[i, :]), str(query_tokens[i, :]))
+                f1 += f1_score(str(decoder_tokens[i, :query_len[i]]), str(query_tokens[i, 1:query_len[i]-1]))
+                em += exact_match_score(str(decoder_tokens[i, :query_len[i]]), str(query_tokens[i, 1:query_len[i]-1]))
 
                 size += 1
+
+                if size % print_every == 0:
+                    decoded_parse = [rev_vocab[j] for j in decoder_tokens[i, :] if j != data_util.PAD_ID]
+                    true_parse = [rev_vocab[j] for j in query_tokens[i, 1:-1] if j != data_util.PAD_ID]
+                    decoded_input = [rev_vocab[j] for j in inp_tokens[i, :] if j != data_util.PAD_ID]
+                    print("input: {}".format(" ".join(decoded_input)))
+                    print("decoded result: {}".format(" ".join(decoded_parse)))
+                    print("ground truth result: {}".format(" ".join(true_parse)))
 
             if size >= sample:
                 break
@@ -390,7 +415,7 @@ class Seq2SeqNeuralParser(object):
 
         return f1, em
 
-    def train(self, session, q_train, q_valid, num_epochs, save_train_dir):
+    def train(self, session, q_train, q_valid, rev_vocab, num_epochs, save_train_dir):
         tic = time.time()
         params = tf.trainable_variables()
         num_params = sum(map(lambda t: np.prod(tf.shape(t.value()).eval()), params))
@@ -451,10 +476,11 @@ class Seq2SeqNeuralParser(object):
             logging.info("Epoch %d Validation cost: %f epoch time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
 
             ## Measure F1 and EM
-            f1, em = self.evaluate_answer(session, q_valid, sample=500)
+            f1, em = self.evaluate_answer(session, q_train, rev_vocab, sample=500)
             logging.info("Training F1 score: {}, EM score: {}".format(f1, em))
-            f1v, emv = self.evaluate_answer(session, q_valid, sample=500)
-            logging.info("Validation F1 score: {}, EM score: {}".format(f1v, emv))
+
+            f1, em = self.evaluate_answer(session, q_valid, rev_vocab, sample=500)
+            logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
 
             if epoch >= self.FLAGS.learning_rate_decay_epoch:
                 logging.info("Annealing learning rate after epoch {} by {}".format(self.FLAGS.learning_rate_decay_epoch,

@@ -92,7 +92,7 @@ def linearize(q):
 
         # Tokenizing everything
         sent = sent.replace("[", " [ ").replace("]", " ] ").replace(";", " ; ")  # so we can tokenize by space
-        sent = sent.replace("{", "{ ").replace("}", " }").replace("/", " / ")
+        sent = sent.replace("{", " { ").replace("}", " }").replace("/", " / ")
         sent = sent.replace("(", " ( ").replace(")", " ) ").replace(",", " , ").replace("x", " x ")
 
         # remove "\\"
@@ -172,7 +172,7 @@ def create_vocabulary(q, root, tokenizer=None):
     print("Vocabulary size: %d" % len(vocab_list))
     with open(pjoin(root, "vocab.dat"), mode="wb") as vocab_file:
         for w in vocab_list:
-            vocab_file.write(w + b"\n")
+            vocab_file.write(w.encode('utf-8') + b"\n")
 
 if __name__ == '__main__':
     np.random.seed(123)
@@ -207,16 +207,32 @@ if __name__ == '__main__':
 
     # ==== We tokenized Small_q ====
 
-    linearize(small_q)
+    # linearize(small_q)
+    #
+    # # Vocabulary size: 244
+    # create_vocabulary(small_q, "data")
+    #
+    # # shuffle q
+    # np.random.shuffle(small_q)
+    #
+    # # map inputs to indices...
+    # tokenize_q = q_to_token_ids(small_q, pjoin("data", "vocab.dat"))
+    #
+    # create_dataset(small_q, "data", prefix="small_q", text_file=True)
+    # create_dataset(tokenize_q, "data", prefix="tok_small_q", pkl_file=True)
+
+    # ==== We tokenize trimmed_q ===
+
+    linearize(trimmed_q)
 
     # Vocabulary size: 244
-    create_vocabulary(small_q, "data")
+    create_vocabulary(trimmed_q, "data")
 
     # shuffle q
-    np.random.shuffle(small_q)
+    np.random.shuffle(trimmed_q)
 
     # map inputs to indices...
-    tokenize_q = q_to_token_ids(small_q, pjoin("data", "vocab.dat"))
+    tokenize_q = q_to_token_ids(trimmed_q, pjoin("data", "vocab.dat"))
 
-    create_dataset(small_q, "data", prefix="small_q", text_file=True)
-    create_dataset(tokenize_q, "data", prefix="tok_small_q", pkl_file=True)
+    create_dataset(trimmed_q, "data", prefix="trimmed_q", text_file=True)
+    create_dataset(tokenize_q, "data", prefix="tok_trimmed_q", pkl_file=True)

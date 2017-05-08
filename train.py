@@ -16,16 +16,16 @@ tf.app.flags.DEFINE_integer("learning_rate_decay_epoch", 4, "Learning rate start
 tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 40, "Batch size to use during training.")
-tf.app.flags.DEFINE_integer("epochs", 40, "Number of epochs to train.")
+tf.app.flags.DEFINE_integer("epochs", 5, "Number of epochs to train.")
 tf.app.flags.DEFINE_integer("curr_epoch", 0, "Start at epoch n.")
-tf.app.flags.DEFINE_integer("size", 100, "Size of each model layer.")
+tf.app.flags.DEFINE_integer("size", 200, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("vocab_dim", 100, "Size of the pretrained vocabulary.")
 tf.app.flags.DEFINE_integer("input_len", 15, "How much input do we want to keep")
 tf.app.flags.DEFINE_integer("query_len", 40, "How much context do we want to keep")  # 400
 tf.app.flags.DEFINE_string("root_dir", "/tmp", "set up your root directory")
 tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
 tf.app.flags.DEFINE_string("optimizer", "adam", "adam / sgd")
-tf.app.flags.DEFINE_integer("print_every", 1, "How many iterations to do per print.")
+tf.app.flags.DEFINE_integer("print_every", 100, "How many iterations to do per print.")
 tf.app.flags.DEFINE_integer("keep", 0, "How many checkpoints to keep, 0 indicates keep all.")
 tf.app.flags.DEFINE_integer("evaluate", 0, "No training, just evaluation")
 
@@ -61,7 +61,7 @@ def main(_):
     vocab, rev_vocab = initialize_vocab(pjoin("data", "vocab.dat"))
     vocab_size = len(vocab)
 
-    dataset = "small"
+    dataset = "trimmed"
     pkl_train_name = pjoin("data", "tok_" + dataset + "_q_train.pkl")
     pkl_val_name = pjoin("data", "tok_" + dataset + "_q_val.pkl")
 
@@ -82,7 +82,7 @@ def main(_):
         initialize_model(sess, parser)
 
         if FLAGS.evaluate == 0:
-            parser.train(sess, q_train, q_valid, FLAGS.epochs, FLAGS.train_dir)
+            parser.train(sess, q_train, q_valid, rev_vocab, FLAGS.epochs, FLAGS.train_dir)
 
 
 if __name__ == '__main__':
