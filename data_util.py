@@ -10,6 +10,12 @@ from nltk.tree import Tree
 from os.path import join as pjoin
 from tensorflow.python.platform import gfile
 
+import sys
+import codecs
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 _PAD = b"<pad>"
 _SOS = b"<sos>"
 _EOS = b"<eos>"
@@ -43,7 +49,6 @@ def tokenize(sequence):
 
 
 def write_to_file(q, root, file_name, text_file=True, pkl_file=True):
-
     if pkl_file:
         file_path = pjoin(root, file_name + ".pkl")
 
@@ -82,6 +87,48 @@ def traverseTree(tree, parts):
         else:
             parts.append(subtree)
 
+def postprocess(s_list):
+    w_list = []
+    for c in s_list:
+        r_par = c.count(')')
+        l_par = c.count('(')
+        if r_par > 1:
+            c = re.sub('\)\)+', ')', c)
+            w_list.append(c)
+            for _ in range(r_par - 1):
+                w_list.append(')')
+        elif l_par > 1:
+            c = re.sub('\(\(+', '(', c)
+            for _ in range(r_par - 1):
+                w_list.append('(')
+            w_list.append(c)
+        else:
+            w_list.append(c)
+
+    return w_list
+
+def src_tokenizer(s):
+    words = basic_tokenizer(unicode(s))
+    new_words = []
+    for w in words:
+        r_punct = re.findall(r"[\w']+|[.,!?;\(\)\[\]]", w)
+
+        segs = []
+        for seg in r_punct:
+            r_multi2 = re.findall(r"[\d+](x)[\d+]", seg)
+            r_multi3 = re.findall(r"(\d+)(x)(\d+)(x)(\d+)", seg)
+            print(r_multi2)
+            print(r_multi3)
+            if len(r_multi2) != 0:
+                segs.extend(list(r_multi2[0]))
+            elif len(r_multi3) != 0:
+                segs.extend(list(r_multi3[0]))
+            else:
+                segs.append(seg)
+
+        new_words.extend(segs)
+
+    return new_words
 
 def linearize(q):
     for line in q:
@@ -121,58 +168,65 @@ def initialize_vocabulary(vocabulary_path):
         raise ValueError("Vocabulary file %s not found.", vocabulary_path)
 
 
-def sentence_to_token_ids(sentence, vocabulary, tokenizer=None):
-    if tokenizer:
-        words = tokenizer(sentence)
-    else:
-        words = basic_tokenizer(sentence)
-    return [vocabulary.get(w, UNK_ID) for w in words]
-
-
-def q_to_token_ids(q, vocabulary_path, tokenizer=None):
-    # we just get a tokenized q, and it will be stored in pkl
-    print("Tokenizing data")
-    vocab, _ = initialize_vocabulary(vocabulary_path)
+def lists_to_indices(list_s, src_vocab, tgt_vocab):
     counter = 0
-    tokenized_q = []
-    for line in q:
+    tokenized_s = []
+    for s in list_s:
         counter += 1
         if counter % 1000 == 0:
             print("tokenizing line %d" % counter)
-        src_token_ids = sentence_to_token_ids(line[0], vocab, tokenizer)
-        tgt_token_ids = sentence_to_token_ids(line[1], vocab, tokenizer)
 
-        tokenized_q.append([src_token_ids, tgt_token_ids])
+        src_tokens = src_tokenizer(s[0])
+        tgt_tokens = postprocess(basic_tokenizer(s[1]))
 
-    return tokenized_q
+        src_token_ids = [src_vocab.get(w, UNK_ID) for w in src_tokens]
+        tgt_token_ids = [tgt_vocab.get(w, UNK_ID) for w in tgt_tokens]
 
-def create_vocabulary(q, root, tokenizer=None):
+        tokenized_s.append([src_token_ids, tgt_token_ids])
+
+    return tokenized_s
+
+def create_vocabulary(list_s, root):
     print("Creating vocabulary %s from data")
-    vocab = {}
+    src_vocab = {}
+    tgt_vocab = {}
 
     counter = 0
 
-    for pair in q:
+    for s in list_s:
         counter += 1
         if counter % 1000 == 0:
             print("processing line %d" % counter)
 
-        # tokenize source and target differently
+        # tokenize source
+        src_tokens = src_tokenizer(s[0])  # hope this is enough
 
-        tokens = tokenizer(pair[0]) if tokenizer else basic_tokenizer(pair[0])
-        tokens.extend(tokenizer(pair[1]) if tokenizer else basic_tokenizer(pair[1]))
+        # tokenize target
+        tgt_tokens = postprocess(basic_tokenizer(s[1]))
 
-        for w in tokens:
-            if w in vocab:
-                vocab[w] += 1
+        for w in src_tokens:
+            if w in src_vocab:
+                src_vocab[w] += 1
             else:
-                vocab[w] = 1
+                src_vocab[w] = 1
 
-    vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-    print("Vocabulary size: %d" % len(vocab_list))
-    with open(pjoin(root, "vocab.dat"), mode="wb") as vocab_file:
-        for w in vocab_list:
-            vocab_file.write(w.encode('utf-8') + b"\n")
+        for w in tgt_tokens:
+            if w in tgt_vocab:
+                tgt_vocab[w] += 1
+            else:
+                tgt_vocab[w] = 1
+
+    src_vocab_list = _START_VOCAB + sorted(src_vocab, key=src_vocab.get, reverse=True)
+    tgt_vocab_list = _START_VOCAB + sorted(tgt_vocab, key=tgt_vocab.get, reverse=True)
+    print("Source vocabulary size: %d" % len(src_vocab_list))
+    print("Target vocabulary size: %d" % len(tgt_vocab_list))
+
+    with codecs.open(pjoin(root, "src_vocab.dat"), "w", encoding="utf-8") as vocab_file:
+        for w in src_vocab_list:
+            vocab_file.write(w + "\n")  # .encode('utf-8')
+    with codecs.open(pjoin(root, "tgt_vocab.dat"), "w", encoding="utf-8") as vocab_file:
+        for w in tgt_vocab_list:
+            vocab_file.write(w + "\n")  # .encode('utf-8')
 
 if __name__ == '__main__':
     np.random.seed(123)
@@ -223,16 +277,17 @@ if __name__ == '__main__':
 
     # ==== We tokenize trimmed_q ===
 
-    linearize(trimmed_q)
-
     # Vocabulary size: 244
-    create_vocabulary(trimmed_q, "data")
+    create_vocabulary(trimmed_q, pjoin("data", "nat"))
+
+    src_vocab, rev_src_vocab = initialize_vocabulary(pjoin("data", "nat", "src_vocab.dat"))
+    tgt_vocab, rev_tgt_vocab = initialize_vocabulary(pjoin("data", "nat", "tgt_vocab.dat"))
 
     # shuffle q
     np.random.shuffle(trimmed_q)
 
     # map inputs to indices...
-    tokenize_q = q_to_token_ids(trimmed_q, pjoin("data", "vocab.dat"))
+    tokenized_q = lists_to_indices(trimmed_q, src_vocab, tgt_vocab)
 
     create_dataset(trimmed_q, "data", prefix="trimmed_q", text_file=True)
-    create_dataset(tokenize_q, "data", prefix="tok_trimmed_q", pkl_file=True)
+    create_dataset(tokenized_q, "data", prefix="trimmed_q", pkl_file=True)

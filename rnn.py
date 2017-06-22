@@ -74,7 +74,7 @@ class Encoder(object):
                 out = fw_out + bw_out
                 out = self.dropout(out)
 
-            encoder_outputs = fw_states + bw_states
+            encoder_outputs = self.dropout(fw_states + bw_states)
 
         return out, encoder_outputs
 
@@ -210,11 +210,11 @@ def pair_iter(q, batch_size, inp_len, query_len):
 
 class Seq2SeqNeuralParser(object):
     def __init__(self, encoder, decoder, max_gradient_norm, learning_rate,
-                 learning_rate_decay_factor, dropout, input_len, vocab_size, vocab,
+                 learning_rate_decay_factor, dropout, input_len, src_vocab, tgt_vocab,
                  FLAGS, optimizer="adam"):
         self.inp_len = input_len
-        self.vocab_size = vocab_size
-        self.vocab = vocab
+        self.src_vocab = src_vocab
+        self.tgt_vocab = tgt_vocab
         self.query_len = FLAGS.query_len
         self.batch_size = FLAGS.batch_size
 
@@ -254,28 +254,28 @@ class Seq2SeqNeuralParser(object):
         self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.keep)
 
     def setup_embeddings(self):
-        self.L_enc = tf.get_variable("L_enc", [self.vocab_size, self.encoder.size])
-        self.L_dec = tf.get_variable("L_dec", [self.vocab_size, self.decoder.size])
+        self.L_enc = tf.get_variable("L_enc", [len(self.src_vocab), self.encoder.size])
+        self.L_dec = tf.get_variable("L_dec", [len(self.tgt_vocab), self.decoder.size])
 
         self.encoder_inputs = embedding_ops.embedding_lookup(self.L_enc, self.inp_tokens)
         self.decoder_inputs = embedding_ops.embedding_lookup(self.L_dec, self.query_tokens)
 
     def setup_system(self):
-        input_all_states, input_last_state = self.encoder.encode(self.encoder_inputs, self.inp_mask)
+        self.encoder_output, input_last_state = self.encoder.encode(self.encoder_inputs, self.inp_mask)
         target_length = tf.reduce_sum(self.query_mask, reduction_indices=1)
-        self.decoder_output = self.decoder.decode(self.decoder_inputs, input_all_states, target_length)
+        self.decoder_output = self.decoder.decode(self.decoder_inputs, self.encoder_output, target_length)
 
     def setup_loss(self):
         with vs.variable_scope("Logistic"):
             self.outputs = rnn_linear(self.decoder_output,
-                                      self.decoder.size, output_size=self.vocab_size,
+                                      self.decoder.size, output_size=len(self.tgt_vocab),
                                       scope="flogits", return_param=False)
 
             unroll = tf.shape(self.outputs)[1]
             batch_size = tf.shape(self.outputs)[0]
 
             self.seq_loss = tf.nn.seq2seq.sequence_loss_by_example(
-                [tf.reshape(self.outputs, [-1, self.vocab_size])],
+                [tf.reshape(self.outputs, [-1, len(self.tgt_vocab)])],
                 [tf.reshape(self.query_tokens, [-1])],
                 [tf.ones(tf.pack([batch_size * unroll]))])  # tf.cast(tf.reshape(self.query_mask, [-1]), tf.float32)
 
@@ -325,84 +325,103 @@ class Seq2SeqNeuralParser(object):
         valid_cost = np.sum(valid_costs) / float(len(valid_costs))
         return valid_cost
 
-    # def decode_greedy_batch(self, model, sess, encoder_output, batch_size):
-    #     decoder_state = None
-    #     decoder_input = np.array([data_util.SOS_ID, ] * batch_size, dtype=np.int32)
-    #
-    #     output_sent = np.array([data_util.PAD_ID, ] * self.query_len
-    #                            * batch_size, dtype=np.int32).reshape([batch_size, self.query_len])
-    #     dones = np.array([True, ] * self.batch_size, dtype=np.bool)
-    #     i = 0
-    #     while True:
-    #         decoder_output, decoder_state = model.decode(sess, encoder_output, decoder_input,
-    #                                                                decoder_states=decoder_state)
-    #
-    #         # decoder_output shape: (1, batch_size, vocab_size)
-    #         token_highest_prob = np.argmax(np.squeeze(decoder_output), axis=1)
-    #
-    #         # token_highest_prob shape: (batch_size,)
-    #         mask = token_highest_prob == data_util.EOS_ID
-    #         update_dones_indices = np.nonzero(mask)
-    #         # update on newly finished sentence, add EOS_ID
-    #         new_finished = update_dones_indices != dones
-    #         output_sent[i, new_finished] = data_util.EOS_ID
-    #
-    #         dones[update_dones_indices] = False
-    #         if i >= self.query_len - 1 or np.sum(np.nonzero(dones)) == 0:
-    #             break
-    #
-    #         output_sent[i, dones] = token_highest_prob
-    #         decoder_input = token_highest_prob.reshape([1, batch_size])
-    #         i += 1
-    #
-    #     return output_sent
+    def decode_greedy_batch(self, sess, encoder_output, batch_size):
+        decoder_state = None
+        decoder_input = np.array([data_util.SOS_ID, ] * batch_size, dtype=np.int32)
 
-    def decode(self, session, inp_tokens, inp_mask, query_tokens, query_mask):
+        output_sent = np.array([data_util.PAD_ID, ] * self.query_len
+                               * batch_size, dtype=np.int32).reshape([batch_size, self.query_len])
+        dones = np.array([True, ] * self.batch_size, dtype=np.bool)
+        i = 0
+        while True:
+            decoder_output, decoder_state = self.decode(sess, encoder_output, decoder_input,
+                                                                   decoder_states=decoder_state)
+
+            # decoder_output shape: (1, batch_size, vocab_size)
+            token_highest_prob = np.argmax(np.squeeze(decoder_output), axis=1)
+
+            # token_highest_prob shape: (batch_size,)
+            mask = token_highest_prob == data_util.EOS_ID
+            update_dones_indices = np.nonzero(mask)
+            # update on newly finished sentence, add EOS_ID
+            new_finished = update_dones_indices != dones
+            output_sent[i, new_finished] = data_util.EOS_ID
+
+            dones[update_dones_indices] = False
+            if i >= self.query_len - 1 or np.sum(np.nonzero(dones)) == 0:
+                break
+
+            output_sent[i, dones] = token_highest_prob
+            decoder_input = token_highest_prob.reshape([1, batch_size])
+            i += 1
+
+        return output_sent
+
+    def get_encode(self, session, inp_tokens, inp_mask):
         input_feed = {}
         input_feed[self.inp_tokens] = inp_tokens
         input_feed[self.inp_mask] = inp_mask
-        input_feed[self.query_tokens] = query_tokens
-        input_feed[self.query_mask] = query_mask
-
         input_feed[self.encoder.keep_prob] = 1.
-        input_feed[self.decoder.keep_prob] = 1.
 
-        output_feed = [self.decoder_output]
-
-        self.decoder.set_default_decoder_state_input(input_feed, query_tokens.shape[0])
+        output_feed = [self.encoder_output]
 
         outputs = session.run(output_feed, input_feed)
 
         return outputs[0]
 
-    def evaluate_answer(self, session, q, rev_vocab, sample=500, print_every=250):
+    def decode(self, session, inp_tokens, query_tokens, query_mask=None, decoder_states=None):
+        input_feed = {}
+        input_feed[self.inp_tokens] = inp_tokens
+        input_feed[self.query_tokens] = query_tokens
+        input_feed[self.query_mask] = query_mask if query_mask is not None else np.ones_like(query_tokens)
+
+        input_feed[self.encoder.keep_prob] = 1.
+        input_feed[self.decoder.keep_prob] = 1.
+
+        output_feed = [self.outputs] + + self.decoder.decoder_state_output
+
+        if decoder_states is None:
+            self.decoder.set_default_decoder_state_input(input_feed, query_tokens.shape[0])
+        else:
+            for i in xrange(self.decoder.num_layers):
+                input_feed[self.decoder.decoder_state_input[i]] = decoder_states[i]
+
+        outputs = session.run(output_feed, input_feed)
+
+        return outputs[0], outputs[1:]
+
+    def evaluate_answer(self, session, q, rev_src_vocab, rev_tgt_vocab, sample=100, print_every=100):
         # this is teacher-forcing evaluation, not even greedy decode
         f1 = 0.
         em = 0.
-        size = 0
+        size = 0.
 
         for inp_tokens, inp_mask, query_tokens, query_mask in pair_iter(q, self.batch_size, self.inp_len,
                                                                         self.query_len):
-            decoder_output = self.decode(session, inp_tokens, inp_mask, query_tokens, query_mask)
-            decoder_tokens = np.argmax(decoder_output, axis=-1)
+            # decoder_output = self.decode(session, inp_tokens, inp_mask, query_tokens, query_mask)
+            encoder_output = self.get_encode(session, inp_tokens, inp_mask)
+            decoder_output = self.decode_greedy_batch(session, encoder_output, self.batch_size)
+
+            # decoder_tokens = np.argmax(decoder_output, axis=-1)
+            decoder_tokens = decoder_output
 
             # those are batched right now
-            decoder_tokens = np.squeeze(decoder_tokens) * query_mask
-            query_tokens = query_tokens * query_mask
-            batch_size = inp_tokens.shape[0]
+            # decoder_tokens = np.squeeze(decoder_tokens) * query_mask
+            # query_tokens = query_tokens * query_mask
 
+            batch_size = inp_tokens.shape[0]
             query_len = np.sum(query_mask, axis=1)
 
             for i in range(batch_size):
-                f1 += f1_score(str(decoder_tokens[i, :query_len[i]]), str(query_tokens[i, 1:query_len[i]-1]))
-                em += exact_match_score(str(decoder_tokens[i, :query_len[i]]), str(query_tokens[i, 1:query_len[i]-1]))
+                f1 += f1_score(str(decoder_tokens[i, 1:query_len[i]-1]), str(query_tokens[i, 1:query_len[i]-1]))
+                em += exact_match_score(str(decoder_tokens[i, 1:query_len[i]-1]), str(query_tokens[i, 1:query_len[i]-1]))
 
                 size += 1
 
                 if size % print_every == 0:
-                    decoded_parse = [rev_vocab[j] for j in decoder_tokens[i, :] if j != data_util.PAD_ID]
-                    true_parse = [rev_vocab[j] for j in query_tokens[i, 1:-1] if j != data_util.PAD_ID]
-                    decoded_input = [rev_vocab[j] for j in inp_tokens[i, :] if j != data_util.PAD_ID]
+                    decoded_parse = [rev_tgt_vocab[j] for j in decoder_tokens[i, 1:-1] if j != data_util.PAD_ID]
+                    true_parse = [rev_tgt_vocab[j] for j in query_tokens[i, 1:-1] if j != data_util.PAD_ID]
+                    decoded_input = [rev_src_vocab[j] for j in inp_tokens[i, :] if j != data_util.PAD_ID]
                     print("input: {}".format(" ".join(decoded_input)))
                     print("decoded result: {}".format(" ".join(decoded_parse)))
                     print("ground truth result: {}".format(" ".join(true_parse)))
@@ -415,7 +434,7 @@ class Seq2SeqNeuralParser(object):
 
         return f1, em
 
-    def train(self, session, q_train, q_valid, rev_vocab, num_epochs, save_train_dir):
+    def train(self, session, q_train, q_valid, rev_src_vocab, rev_tgt_vocab, num_epochs, save_train_dir):
         tic = time.time()
         params = tf.trainable_variables()
         num_params = sum(map(lambda t: np.prod(tf.shape(t.value()).eval()), params))
@@ -476,10 +495,10 @@ class Seq2SeqNeuralParser(object):
             logging.info("Epoch %d Validation cost: %f epoch time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
 
             ## Measure F1 and EM
-            f1, em = self.evaluate_answer(session, q_train, rev_vocab, sample=500)
+            f1, em = self.evaluate_answer(session, q_train, rev_src_vocab, rev_tgt_vocab, sample=5, print_every=2)
             logging.info("Training F1 score: {}, EM score: {}".format(f1, em))
 
-            f1, em = self.evaluate_answer(session, q_valid, rev_vocab, sample=500)
+            f1, em = self.evaluate_answer(session, q_valid, rev_src_vocab, rev_tgt_vocab, sample=5, print_every=2)
             logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
 
             if epoch >= self.FLAGS.learning_rate_decay_epoch:
