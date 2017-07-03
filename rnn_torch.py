@@ -302,15 +302,26 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
     return decoded_words, decoder_attentions[:di + 1]
 
 
+def detokenize(toks, reverse_vocab):
+    # detokenize the decoder output, not batched anymore
+    outsent = ""
+    for i in range(len(toks)):
+        if toks[i] == EOS_ID:
+            break
+        if toks[i] >= len(_START_VOCAB) and toks[i] != _PAD:
+            outsent += reverse_vocab[toks[i]]
+    return outsent
+
 def evaluateRandomly(encoder, decoder, valid_pairs, n=10):
     # we can examine on the validation set
+    # TODO: add detokenization
     for i in range(n):
         pair = random.choice(valid_pairs)
-        print('>', pair[0])
-        print('=', pair[1])
+        print('src: ', detokenize(pair[0], input_lang.index2word))
+        print('tgt: ', detokenize(pair[1], output_lang.index2word))
         output_words, attentions = evaluate(encoder, decoder, pair[0])
         output_sentence = ' '.join(output_words)
-        print('<', output_sentence)
+        print('decoded: ', detokenize(output_words, output_lang.index2word))
         print('')
 
 def filterPair(p):
