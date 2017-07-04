@@ -264,7 +264,7 @@ def trainIters(encoder, decoder, pairs, n_iters, print_every=1000, plot_every=10
 
 
 def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
-    input_variable = variableFromSentence(input_lang, sentence)
+    input_variable = variableFromSentence(sentence)
     input_length = input_variable.size()[0]
     encoder_hidden = encoder.initHidden()
 
@@ -314,13 +314,11 @@ def detokenize(toks, reverse_vocab):
 
 def evaluateRandomly(encoder, decoder, valid_pairs, n=10):
     # we can examine on the validation set
-    # TODO: add detokenization
     for i in range(n):
         pair = random.choice(valid_pairs)
         print('src: ', detokenize(pair[0], input_lang.index2word))
         print('tgt: ', detokenize(pair[1], output_lang.index2word))
         output_words, attentions = evaluate(encoder, decoder, pair[0])
-        output_sentence = ' '.join(output_words)
         print('decoded: ', detokenize(output_words, output_lang.index2word))
         print('')
 
