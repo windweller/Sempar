@@ -1,0 +1,157 @@
+Creating 1 layers of 250 units.
+Created model with fresh parameters.
+From train_nlc.py:91 in create_model.: initialize_all_variables (from tensorflow.python.ops.variables) is deprecated and will be removed after 2017-03-02.
+Instructions for updating:
+Use `tf.global_variables_initializer` instead.
+Num params: 1768521
+Initial validation cost: 0.704296
+epoch 1, iter 20, cost 0.267795, exp_cost 0.638389, grad norm 23.930099, param norm 76.313866, batch time 0.138796, length mean/std 105.909091/37.216698
+epoch 1, iter 40, cost 0.110818, exp_cost 0.552171, grad norm 9.237425, param norm 76.968658, batch time 0.128382, length mean/std 108.000000/33.044048
+epoch 1, iter 60, cost 0.062799, exp_cost 0.465070, grad norm 16.281202, param norm 77.651047, batch time 0.115524, length mean/std 105.636364/37.004355
+epoch 1, iter 80, cost 0.049750, exp_cost 0.390125, grad norm 12.387509, param norm 78.049515, batch time 0.118867, length mean/std 104.909091/37.635705
+epoch 1, iter 100, cost 0.043877, exp_cost 0.327180, grad norm 44.181755, param norm 78.315598, batch time 0.127053, length mean/std 103.909091/40.044190
+epoch 1, iter 120, cost 0.038293, exp_cost 0.275088, grad norm 13.900608, param norm 78.541557, batch time 0.131841, length mean/std 103.409091/39.181001
+epoch 1, iter 140, cost 0.035723, exp_cost 0.232111, grad norm 49.817913, param norm 78.751198, batch time 0.124288, length mean/std 104.500000/39.637849
+epoch 1, iter 160, cost 0.033734, exp_cost 0.196579, grad norm 18.401823, param norm 78.943863, batch time 0.120850, length mean/std 104.409091/38.470365
+Epoch 1 Validation cost: 0.028878 time: 22.781944
+Validation F1 score: 0.893503746435, EM score: 0.336012861736
+sandbox/best.ckpt-1 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 2, iter 20, cost 0.030832, exp_cost 0.147762, grad norm 8.531412, param norm 79.430016, batch time 0.137335, length mean/std 105.909091/37.216698
+epoch 2, iter 40, cost 0.031386, exp_cost 0.126090, grad norm 34.726601, param norm 79.642860, batch time 0.129098, length mean/std 108.000000/33.044048
+epoch 2, iter 60, cost 0.027956, exp_cost 0.108443, grad norm 6.219309, param norm 79.805130, batch time 0.115746, length mean/std 105.636364/37.004355
+epoch 2, iter 80, cost 0.030889, exp_cost 0.093660, grad norm 14.064873, param norm 80.013397, batch time 0.124478, length mean/std 104.909091/37.635705
+epoch 2, iter 100, cost 0.023911, exp_cost 0.081265, grad norm 4.922383, param norm 80.239906, batch time 0.121608, length mean/std 103.909091/40.044190
+epoch 2, iter 120, cost 0.027564, exp_cost 0.071143, grad norm 36.945724, param norm 80.449821, batch time 0.125978, length mean/std 103.409091/39.181001
+epoch 2, iter 140, cost 0.025770, exp_cost 0.062743, grad norm 5.965668, param norm 80.604630, batch time 0.134470, length mean/std 104.500000/39.637849
+epoch 2, iter 160, cost 0.024433, exp_cost 0.055694, grad norm 8.112949, param norm 80.779076, batch time 0.124599, length mean/std 104.409091/38.470365
+Epoch 2 Validation cost: 0.022738 time: 22.623710
+Validation F1 score: 0.912510924062, EM score: 0.456591639871
+sandbox/best.ckpt-2 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 3, iter 20, cost 0.025247, exp_cost 0.046278, grad norm 4.333334, param norm 81.006905, batch time 0.135826, length mean/std 105.909091/37.216698
+epoch 3, iter 40, cost 0.024578, exp_cost 0.042017, grad norm 5.746448, param norm 81.177231, batch time 0.131514, length mean/std 108.000000/33.044048
+epoch 3, iter 60, cost 0.021601, exp_cost 0.038583, grad norm 6.317292, param norm 81.354355, batch time 0.113595, length mean/std 105.636364/37.004355
+epoch 3, iter 80, cost 0.024969, exp_cost 0.035668, grad norm 3.443677, param norm 81.500961, batch time 0.121508, length mean/std 104.909091/37.635705
+epoch 3, iter 100, cost 0.024773, exp_cost 0.033251, grad norm 99.055038, param norm 81.627670, batch time 0.125058, length mean/std 103.909091/40.044190
+epoch 3, iter 120, cost 0.024164, exp_cost 0.031206, grad norm 4.482212, param norm 81.749931, batch time 0.126992, length mean/std 103.409091/39.181001
+epoch 3, iter 140, cost 0.022588, exp_cost 0.029521, grad norm 6.182915, param norm 81.878654, batch time 0.128912, length mean/std 104.500000/39.637849
+epoch 3, iter 160, cost 0.021011, exp_cost 0.027934, grad norm 5.138173, param norm 82.066277, batch time 0.117830, length mean/std 104.409091/38.470365
+Epoch 3 Validation cost: 0.020713 time: 22.421942
+Validation F1 score: 0.91820910891, EM score: 0.494372990354
+sandbox/best.ckpt-3 is not in all_model_checkpoint_paths. Manually adding it.
+Creating 1 layers of 250 units.
+Created model with fresh parameters.
+From train_nlc.py:91 in create_model.: initialize_all_variables (from tensorflow.python.ops.variables) is deprecated and will be removed after 2017-03-02.
+Instructions for updating:
+Use `tf.global_variables_initializer` instead.
+Num params: 1768521
+Initial validation cost: 0.631335
+epoch 1, iter 20, cost 0.242379, exp_cost 0.573963, grad norm 22.133083, param norm 76.337944, batch time 0.137298, length mean/std 105.909091/37.216698
+epoch 1, iter 40, cost 0.115718, exp_cost 0.498459, grad norm 10.302405, param norm 76.917351, batch time 0.132305, length mean/std 108.000000/33.044048
+epoch 1, iter 60, cost 0.064892, exp_cost 0.421957, grad norm 8.057312, param norm 77.497993, batch time 0.113306, length mean/std 105.636364/37.004355
+epoch 1, iter 80, cost 0.054180, exp_cost 0.355724, grad norm 26.182480, param norm 77.899750, batch time 0.117385, length mean/std 104.909091/37.635705
+epoch 1, iter 100, cost 0.044073, exp_cost 0.300003, grad norm 16.071062, param norm 78.134224, batch time 0.125302, length mean/std 103.909091/40.044190
+epoch 1, iter 120, cost 0.043202, exp_cost 0.253635, grad norm 46.067287, param norm 78.369965, batch time 0.124401, length mean/std 103.409091/39.181001
+epoch 1, iter 140, cost 0.038406, exp_cost 0.214891, grad norm 51.670769, param norm 78.582787, batch time 0.134457, length mean/std 104.500000/39.637849
+epoch 1, iter 160, cost 0.034596, exp_cost 0.182694, grad norm 7.261500, param norm 78.838005, batch time 0.119955, length mean/std 104.409091/38.470365
+Epoch 1 Validation cost: 0.029005 time: 22.757122
+Validation F1 score: 0.897018782139, EM score: 0.353697749196
+sandbox/best.ckpt-1 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 2, iter 20, cost 0.032689, exp_cost 0.138361, grad norm 13.069637, param norm 79.380989, batch time 0.134766, length mean/std 105.909091/37.216698
+epoch 2, iter 40, cost 0.032506, exp_cost 0.118526, grad norm 16.087049, param norm 79.590645, batch time 0.132587, length mean/std 108.000000/33.044048
+epoch 2, iter 60, cost 0.028691, exp_cost 0.102301, grad norm 16.026806, param norm 79.761665, batch time 0.107640, length mean/std 105.636364/37.004355
+epoch 2, iter 80, cost 0.030022, exp_cost 0.088780, grad norm 5.613501, param norm 79.944550, batch time 0.122371, length mean/std 104.909091/37.635705
+epoch 2, iter 100, cost 0.024438, exp_cost 0.077394, grad norm 44.095139, param norm 80.146759, batch time 0.124478, length mean/std 103.909091/40.044190
+epoch 2, iter 120, cost 0.027379, exp_cost 0.068238, grad norm 6.385472, param norm 80.302666, batch time 0.132543, length mean/std 103.409091/39.181001
+epoch 2, iter 140, cost 0.026353, exp_cost 0.060467, grad norm 10.590958, param norm 80.448967, batch time 0.126626, length mean/std 104.500000/39.637849
+epoch 2, iter 160, cost 0.023082, exp_cost 0.054001, grad norm 4.882184, param norm 80.621506, batch time 0.120342, length mean/std 104.409091/38.470365
+Epoch 2 Validation cost: 0.023142 time: 22.603390
+Validation F1 score: 0.909985938183, EM score: 0.427652733119
+sandbox/best.ckpt-2 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 3, iter 20, cost 0.024996, exp_cost 0.045136, grad norm 4.271698, param norm 80.936920, batch time 0.136748, length mean/std 105.909091/37.216698
+epoch 3, iter 40, cost 0.025206, exp_cost 0.041141, grad norm 5.411854, param norm 81.102837, batch time 0.133835, length mean/std 108.000000/33.044048
+epoch 3, iter 60, cost 0.022596, exp_cost 0.037996, grad norm 11.651020, param norm 81.264023, batch time 0.113858, length mean/std 105.636364/37.004355
+epoch 3, iter 80, cost 0.025660, exp_cost 0.035355, grad norm 9.482294, param norm 81.427826, batch time 0.123035, length mean/std 104.909091/37.635705
+epoch 3, iter 100, cost 0.020383, exp_cost 0.032934, grad norm 4.396456, param norm 81.635468, batch time 0.125853, length mean/std 103.909091/40.044190
+epoch 3, iter 120, cost 0.023049, exp_cost 0.030964, grad norm 5.352342, param norm 81.847267, batch time 0.131376, length mean/std 103.409091/39.181001
+epoch 3, iter 140, cost 0.023938, exp_cost 0.029374, grad norm 6.547671, param norm 82.004639, batch time 0.134690, length mean/std 104.500000/39.637849
+epoch 3, iter 160, cost 0.020383, exp_cost 0.027901, grad norm 3.816483, param norm 82.181404, batch time 0.118930, length mean/std 104.409091/38.470365
+Epoch 3 Validation cost: 0.021007 time: 22.381396
+Validation F1 score: 0.919309434206, EM score: 0.5
+sandbox/best.ckpt-3 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 4, iter 20, cost 0.021568, exp_cost 0.025813, grad norm 4.301747, param norm 82.473518, batch time 0.138539, length mean/std 105.909091/37.216698
+epoch 4, iter 40, cost 0.023487, exp_cost 0.024857, grad norm 52.111893, param norm 82.632309, batch time 0.131053, length mean/std 108.000000/33.044048
+epoch 4, iter 60, cost 0.019349, exp_cost 0.024176, grad norm 9.646008, param norm 82.776665, batch time 0.114033, length mean/std 105.636364/37.004355
+epoch 4, iter 80, cost 0.023414, exp_cost 0.023565, grad norm 4.002172, param norm 82.949669, batch time 0.122785, length mean/std 104.909091/37.635705
+epoch 4, iter 100, cost 0.017474, exp_cost 0.022842, grad norm 8.187655, param norm 83.108856, batch time 0.124679, length mean/std 103.909091/40.044190
+epoch 4, iter 120, cost 0.021993, exp_cost 0.022281, grad norm 5.081872, param norm 83.283905, batch time 0.121586, length mean/std 103.409091/39.181001
+epoch 4, iter 140, cost 0.019842, exp_cost 0.021881, grad norm 4.637482, param norm 83.408195, batch time 0.125487, length mean/std 104.500000/39.637849
+epoch 4, iter 160, cost 0.018593, exp_cost 0.021426, grad norm 3.154514, param norm 83.550507, batch time 0.117522, length mean/std 104.409091/38.470365
+Epoch 4 Validation cost: 0.019579 time: 22.332277
+Validation F1 score: 0.91967338327, EM score: 0.51768488746
+sandbox/best.ckpt-4 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 5, iter 20, cost 0.019112, exp_cost 0.020759, grad norm 4.362736, param norm 83.747871, batch time 0.134003, length mean/std 105.909091/37.216698
+epoch 5, iter 40, cost 0.020883, exp_cost 0.020432, grad norm 4.841691, param norm 83.902008, batch time 0.133194, length mean/std 108.000000/33.044048
+epoch 5, iter 60, cost 0.018096, exp_cost 0.020207, grad norm 3.158093, param norm 84.051880, batch time 0.112600, length mean/std 105.636364/37.004355
+epoch 5, iter 80, cost 0.022837, exp_cost 0.020036, grad norm 4.233910, param norm 84.173721, batch time 0.118231, length mean/std 104.909091/37.635705
+epoch 5, iter 100, cost 0.016058, exp_cost 0.019725, grad norm 4.191787, param norm 84.296745, batch time 0.121351, length mean/std 103.909091/40.044190
+epoch 5, iter 120, cost 0.020494, exp_cost 0.019535, grad norm 4.780413, param norm 84.442543, batch time 0.125448, length mean/std 103.409091/39.181001
+epoch 5, iter 140, cost 0.019802, exp_cost 0.019458, grad norm 5.615031, param norm 84.524666, batch time 0.133193, length mean/std 104.500000/39.637849
+epoch 5, iter 160, cost 0.017997, exp_cost 0.019228, grad norm 10.351651, param norm 84.639053, batch time 0.118508, length mean/std 104.409091/38.470365
+Epoch 5 Validation cost: 0.018856 time: 22.359660
+Validation F1 score: 0.92062306705, EM score: 0.529742765273
+sandbox/best.ckpt-5 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 6, iter 20, cost 0.018950, exp_cost 0.018894, grad norm 4.272653, param norm 84.825661, batch time 0.132367, length mean/std 105.909091/37.216698
+epoch 6, iter 40, cost 0.020172, exp_cost 0.018743, grad norm 4.841101, param norm 84.979156, batch time 0.131433, length mean/std 108.000000/33.044048
+epoch 6, iter 60, cost 0.017119, exp_cost 0.018654, grad norm 3.275682, param norm 85.106850, batch time 0.113733, length mean/std 105.636364/37.004355
+epoch 6, iter 80, cost 0.021651, exp_cost 0.018638, grad norm 4.020150, param norm 85.200371, batch time 0.123068, length mean/std 104.909091/37.635705
+epoch 6, iter 100, cost 0.014884, exp_cost 0.018444, grad norm 3.596166, param norm 85.303772, batch time 0.125916, length mean/std 103.909091/40.044190
+epoch 6, iter 120, cost 0.018483, exp_cost 0.018316, grad norm 3.912201, param norm 85.426384, batch time 0.121576, length mean/std 103.409091/39.181001
+epoch 6, iter 140, cost 0.018128, exp_cost 0.018271, grad norm 4.921002, param norm 85.517555, batch time 0.133271, length mean/std 104.500000/39.637849
+epoch 6, iter 160, cost 0.017953, exp_cost 0.018136, grad norm 5.195588, param norm 85.611389, batch time 0.119165, length mean/std 104.409091/38.470365
+Epoch 6 Validation cost: 0.018388 time: 22.424214
+Validation F1 score: 0.921114714193, EM score: 0.532154340836
+sandbox/best.ckpt-6 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 7, iter 20, cost 0.018183, exp_cost 0.017944, grad norm 3.872016, param norm 85.782043, batch time 0.139554, length mean/std 105.909091/37.216698
+epoch 7, iter 40, cost 0.020012, exp_cost 0.017891, grad norm 8.266618, param norm 85.929665, batch time 0.130646, length mean/std 108.000000/33.044048
+epoch 7, iter 60, cost 0.016334, exp_cost 0.017821, grad norm 3.421072, param norm 86.046547, batch time 0.110842, length mean/std 105.636364/37.004355
+epoch 7, iter 80, cost 0.021391, exp_cost 0.017798, grad norm 3.399297, param norm 86.142105, batch time 0.114939, length mean/std 104.909091/37.635705
+epoch 7, iter 100, cost 0.014846, exp_cost 0.017639, grad norm 3.688260, param norm 86.243774, batch time 0.122077, length mean/std 103.909091/40.044190
+epoch 7, iter 120, cost 0.018544, exp_cost 0.017525, grad norm 3.748710, param norm 86.357201, batch time 0.123134, length mean/std 103.409091/39.181001
+epoch 7, iter 140, cost 0.018201, exp_cost 0.017534, grad norm 4.936389, param norm 86.445549, batch time 0.122929, length mean/std 104.500000/39.637849
+epoch 7, iter 160, cost 0.016462, exp_cost 0.017421, grad norm 2.894694, param norm 86.537483, batch time 0.116588, length mean/std 104.409091/38.470365
+Epoch 7 Validation cost: 0.018205 time: 22.233726
+Validation F1 score: 0.923024920536, EM score: 0.534565916399
+sandbox/best.ckpt-7 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 8, iter 20, cost 0.017399, exp_cost 0.017265, grad norm 3.661970, param norm 86.689484, batch time 0.131487, length mean/std 105.909091/37.216698
+epoch 8, iter 40, cost 0.019196, exp_cost 0.017216, grad norm 4.595909, param norm 86.823509, batch time 0.129752, length mean/std 108.000000/33.044048
+epoch 8, iter 60, cost 0.015960, exp_cost 0.017168, grad norm 3.371099, param norm 86.925323, batch time 0.106857, length mean/std 105.636364/37.004355
+epoch 8, iter 80, cost 0.020884, exp_cost 0.017168, grad norm 3.982725, param norm 87.022285, batch time 0.122100, length mean/std 104.909091/37.635705
+epoch 8, iter 100, cost 0.014265, exp_cost 0.017050, grad norm 3.476470, param norm 87.102974, batch time 0.129950, length mean/std 103.909091/40.044190
+epoch 8, iter 120, cost 0.017450, exp_cost 0.016980, grad norm 3.308480, param norm 87.202835, batch time 0.134077, length mean/std 103.409091/39.181001
+epoch 8, iter 140, cost 0.018023, exp_cost 0.017033, grad norm 4.916094, param norm 87.283775, batch time 0.135950, length mean/std 104.500000/39.637849
+epoch 8, iter 160, cost 0.016109, exp_cost 0.016952, grad norm 2.866933, param norm 87.368919, batch time 0.126076, length mean/std 104.409091/38.470365
+Epoch 8 Validation cost: 0.017981 time: 22.304075
+Validation F1 score: 0.922688156455, EM score: 0.540996784566
+sandbox/best.ckpt-8 is not in all_model_checkpoint_paths. Manually adding it.
+epoch 9, iter 20, cost 0.016913, exp_cost 0.016808, grad norm 3.588065, param norm 87.514565, batch time 0.137529, length mean/std 105.909091/37.216698
+epoch 9, iter 40, cost 0.018632, exp_cost 0.016814, grad norm 3.590455, param norm 87.627998, batch time 0.134057, length mean/std 108.000000/33.044048
+epoch 9, iter 60, cost 0.015686, exp_cost 0.016821, grad norm 3.459562, param norm 87.724396, batch time 0.112210, length mean/std 105.636364/37.004355
+epoch 9, iter 80, cost 0.020834, exp_cost 0.016838, grad norm 3.179293, param norm 87.827583, batch time 0.119459, length mean/std 104.909091/37.635705
+epoch 9, iter 100, cost 0.013781, exp_cost 0.016711, grad norm 3.133274, param norm 87.912094, batch time 0.123214, length mean/std 103.909091/40.044190
+epoch 9, iter 120, cost 0.017811, exp_cost 0.016656, grad norm 3.497202, param norm 88.004768, batch time 0.124848, length mean/std 103.409091/39.181001
+epoch 9, iter 140, cost 0.017442, exp_cost 0.016685, grad norm 4.206280, param norm 88.077652, batch time 0.131792, length mean/std 104.500000/39.637849
+epoch 9, iter 160, cost 0.015934, exp_cost 0.016606, grad norm 2.553041, param norm 88.151718, batch time 0.125918, length mean/std 104.409091/38.470365
+Epoch 9 Validation cost: 0.017995 time: 22.314746
+Validation F1 score: 0.923113208916, EM score: 0.538585209003
+Annealing learning rate by 0.950000
+epoch 10, iter 20, cost 0.017340, exp_cost 0.016523, grad norm 3.832165, param norm 87.515129, batch time 0.127515, length mean/std 105.909091/37.216698
+epoch 10, iter 40, cost 0.019177, exp_cost 0.016694, grad norm 3.949796, param norm 87.640396, batch time 0.129430, length mean/std 108.000000/33.044048
+epoch 10, iter 60, cost 0.015698, exp_cost 0.016803, grad norm 3.681101, param norm 87.731667, batch time 0.105324, length mean/std 105.636364/37.004355
+epoch 10, iter 80, cost 0.020574, exp_cost 0.016836, grad norm 3.369557, param norm 87.830482, batch time 0.124402, length mean/std 104.909091/37.635705
+epoch 10, iter 100, cost 0.013870, exp_cost 0.016742, grad norm 3.446599, param norm 87.917854, batch time 0.124345, length mean/std 103.909091/40.044190
+epoch 10, iter 120, cost 0.017487, exp_cost 0.016656, grad norm 3.436493, param norm 88.027847, batch time 0.124133, length mean/std 103.409091/39.181001
+epoch 10, iter 140, cost 0.017688, exp_cost 0.016695, grad norm 3.851724, param norm 88.106438, batch time 0.126288, length mean/std 104.500000/39.637849
+epoch 10, iter 160, cost 0.015824, exp_cost 0.016611, grad norm 2.743086, param norm 88.191750, batch time 0.118792, length mean/std 104.409091/38.470365
+Epoch 10 Validation cost: 0.017925 time: 22.094835
+Validation F1 score: 0.9219911736, EM score: 0.536977491961
+sandbox/best.ckpt-10 is not in all_model_checkpoint_paths. Manually adding it.
