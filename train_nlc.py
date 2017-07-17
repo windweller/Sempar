@@ -147,13 +147,6 @@ def pair_iter(q, batch_size, inp_len, query_len):
         yield padded_input, input_mask, padded_query, query_mask
         batched_input, batched_query = [], []
 
-# def detokenize_tgt(toks, reverse_vocab):
-#     outsent = ''
-#     for i in range(toks.shape[0]):
-#         if toks[i] >= len(_START_VOCAB) and toks[i] != _PAD:
-#             outsent += reverse_vocab[toks[i][0]]
-#     return outsent
-
 def decode_beam(model, sess, encoder_output, max_beam_size):
   toks, probs = model.decode_beam(sess, encoder_output, beam_size=max_beam_size)
   return toks.tolist(), probs.tolist()
@@ -221,10 +214,14 @@ def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, 
 
 def train():
     """Train a translation model using NLC data."""
-    # Prepare NLC data.
+
+    # TODO: add learning rate decay schedule
+
+    # TODO: incorporate context into encoder...
+
     dataset = FLAGS.dataset
 
-    logging.info("Preparing NLC data in %s" % FLAGS.data_dir)
+    logging.info("Preparing %s data in %s" % (FLAGS.dataset, FLAGS.data_dir))
 
     src_vocab, rev_src_vocab = initialize_vocab(pjoin("data", dataset, "src_vocab.dat"))
     tgt_vocab, rev_tgt_vocab = initialize_vocab(pjoin("data", dataset, "tgt_vocab.dat"))

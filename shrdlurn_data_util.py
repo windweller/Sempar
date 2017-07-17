@@ -56,6 +56,19 @@ def parse_utterance(s):
     return m[0]
 
 
+# to replace parse_list
+def array_to_string(list_str):
+    # only for context and TargetValue
+    # strip beginning and end '[' and ']'
+    # seperate '[' '3' ']'
+    m = re.findall(r"\[([0-9_,]+)\]", list_str)
+    str_m = []
+    for pair in m:
+        str_m.append('[ ' + " ".join(pair.split(",")) + ' ] ')
+    str_m = "".join(str_m).strip()
+    return str_m
+
+
 def lisp_to_dict(lisps):
     list_dict = []
 
@@ -69,6 +82,8 @@ def lisp_to_dict(lisps):
                 context = parse_list(line)
             if "utterance" in line:
                 utterance = parse_utterance(line)
+            if "targetValue" in line:
+                target_value = parse_list(line)
 
             if "targetFormula" in line:
                 formula.append(line)
@@ -82,7 +97,7 @@ def lisp_to_dict(lisps):
             continue
 
         formula = '\n'.join(formula)
-        list_dict.append([session_id, context, utterance, formula])
+        list_dict.append([session_id, context, utterance, formula, target_value])
 
     return list_dict
 
@@ -103,6 +118,11 @@ def postprocess(s_list):
 
     return w_list
 
+def strip_program_prefix(list_s):
+    new_list = []
+    for s in list_s:
+        new_list.append(s.replace("edu.stanford.nlp.sempre.cubeworld.StacksWorld.", ""))
+    return new_list
 
 # tokenizer
 def basic_tokenizer(sentence):
@@ -198,6 +218,7 @@ def lists_to_indices(list_s, src_vocab, tgt_vocab):
 
     return tokenized_s
 
+
 # 3. split into train, val, test, save as pickle files
 # source/target has cycles (since they are based on the same tutorial/session steps)
 # need to randomize
@@ -215,6 +236,7 @@ def write_to_file(q, root, file_name, text_file=True, pkl_file=True):
             for pair in q:
                 f.write(str(pair) + b"\n")
 
+
 def create_dataset(q, root, prefix="", splits=(0.9, 0.05, 0.05), pkl_file=False, text_file=False):
     train_split, val_split, test_split = splits
     total = len(q)
@@ -229,7 +251,6 @@ def create_dataset(q, root, prefix="", splits=(0.9, 0.05, 0.05), pkl_file=False,
 
 
 if __name__ == '__main__':
-
     trees = data_from_lisp(pjoin("data", "shrdlurn", "all.lisp"))
 
     lists = lisp_to_dict(trees)
