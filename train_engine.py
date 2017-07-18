@@ -148,6 +148,7 @@ def pair_iter(q, batch_size, inp_len, query_len):
 
         padded_input = np.array(padded(batched_input), dtype=np.int32)
         input_mask = (padded_input != data_util.PAD_ID).astype(np.int32)
+
         batched_query = add_sos_eos(batched_query)
         padded_query = np.array(padded(batched_query), dtype=np.int32)
         query_mask = (padded_query != data_util.PAD_ID).astype(np.int32)
@@ -155,6 +156,7 @@ def pair_iter(q, batch_size, inp_len, query_len):
         padded_ctx = np.array(padded(batched_context), dtype=np.int32)
         ctx_mask = (padded_ctx != data_util.PAD_ID).astype(np.int32)
 
+        batched_pred = add_sos_eos(batched_pred)
         padded_pred = np.array(padded(batched_pred), dtype=np.int32)
         pred_mask = (padded_pred != data_util.PAD_ID).astype(np.int32)
 
@@ -225,20 +227,20 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
 
             num_decoded += 1
 
-            f1 += f1_score(best_str, " ".join(pred_env[1:]))
+            f1 += f1_score(best_str, " ".join(pred_env))
             # tgt_sent's first array element is always [""]
-            em += exact_match_score(best_str, " ".join(pred_env[1:]))
+            em += exact_match_score(best_str, " ".join(pred_env))
 
             if num_decoded <= sample:
                 print("cmd: {}".format(" ".join(src_sent)))
-                print("ctx: {}".format(" ".join(ctx_env[1:])))
-                print("truth: {}".format(" ".join(pred_env[1:])))
+                print("ctx: {}".format(" ".join(ctx_env)))
+                print("truth: {}".format(" ".join(pred_env)))
                 print("decoded: {}".format(best_str))
                 print("")
 
             f.write("cmd: {} \r".format(" ".join(src_sent)))
-            f.write("ctx: {} \r".format(" ".join(ctx_env[1:])))
-            f.write("truth: {} \r".format(" ".join(pred_env[1:])))
+            f.write("ctx: {} \r".format(" ".join(ctx_env)))
+            f.write("truth: {} \r".format(" ".join(pred_env)))
             f.write("decoded: {} \r".format(best_str))
             f.write("\r")
             f.write("\r")
@@ -249,7 +251,7 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
 def train():
     """Train a translation model using NLC data."""
 
-    # TODO: build co-attention and reverse co-attention model for context
+    # TODO: redirect logging into train_dir
 
     dataset = FLAGS.dataset
 
