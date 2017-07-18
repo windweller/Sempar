@@ -290,4 +290,4 @@ if __name__ == '__main__':
     tokenized_q = lists_to_indices(trimmed_q, src_vocab, tgt_vocab)
 
     create_dataset(trimmed_q, "data", prefix="trimmed_q", text_file=True)
-    create_dataset(tokenized_q, "data", prefix="trimmed_q", pkl_file=True)
+    create_dataset(trimmed_q, "data", prefix="trimmed_q", pkl_file=True)

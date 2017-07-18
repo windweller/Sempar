@@ -97,7 +97,7 @@ def validate(model, sess, q_valid):
     valid_costs, valid_lengths = [], []
     for source_tokens, source_mask, target_tokens, target_mask in pair_iter(q_valid, FLAGS.batch_size,
                                                                             FLAGS.input_len, FLAGS.query_len):
-        cost = model.test(sess, source_tokens.T, source_mask.T, target_tokens.T, target_mask.T)
+        cost = model.test_engine(sess, source_tokens.T, source_mask.T, target_tokens.T, target_mask.T)
         valid_costs.append(cost * target_mask.shape[1])
         valid_lengths.append(np.sum(target_mask[1:, :]))
     valid_cost = sum(valid_costs) / float(sum(valid_lengths))
@@ -194,7 +194,7 @@ def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, 
 
             num_decoded += 1
 
-            f1 += f1_score(best_str, " ".join(tgt_sent))
+            f1 += f1_score(best_str, " ".join(tgt_sent[1:]))
             # tgt_sent's first array element is always [""]
             em += exact_match_score(best_str, " ".join(tgt_sent[1:]))
 
@@ -215,9 +215,7 @@ def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, 
 def train():
     """Train a translation model using NLC data."""
 
-    # TODO: add learning rate decay schedule
-
-    # TODO: incorporate context into encoder...
+    # TODO: build co-attention and reverse co-attention model for context
 
     dataset = FLAGS.dataset
 
