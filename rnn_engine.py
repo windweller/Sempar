@@ -154,11 +154,13 @@ class NLCModel(object):
             self.L_enc = tf.get_variable("L_enc", [self.src_vocab_size, self.size])
             # self.L_dec = tf.get_variable("L_dec", [self.tgt_vocab_size, self.size])
             self.L_env = tf.get_variable("L_env", [self.env_vocab_size, self.size])
+            self.L_pred = tf.get_variable("L_pred", [self.env_vocab_size, self.size])
+            # we can share or not share L_env and L_pred, we seperate to observe what can happen
 
             self.encoder_inputs = embedding_ops.embedding_lookup(self.L_enc, self.source_tokens)
             # self.target_inputs = embedding_ops.embedding_lookup(self.L_dec, self.target_tokens)
             self.ctx_inputs = embedding_ops.embedding_lookup(self.L_env, self.ctx_tokens)
-            self.pred_inputs = embedding_ops.embedding_lookup(self.L_env, self.pred_tokens)
+            self.pred_inputs = embedding_ops.embedding_lookup(self.L_pred, self.pred_tokens)
 
     def setup_encoder(self):
         self.encoder_cell = rnn_cell.GRUCell(self.size)
@@ -319,7 +321,7 @@ class NLCModel(object):
         def beam_step(time, beam_probs, beam_seqs, cand_probs, cand_seqs, *states):
             batch_size = tf.shape(beam_probs)[0]
             inputs = tf.reshape(tf.slice(beam_seqs, [0, time], [batch_size, 1]), [batch_size])
-            decoder_input = embedding_ops.embedding_lookup(self.L_env, inputs)
+            decoder_input = embedding_ops.embedding_lookup(self.L_pred, inputs) # self.L_env
             decoder_output, state_output = self.decoder_graph(decoder_input, states)
 
             with vs.variable_scope("Logistic", reuse=True):
