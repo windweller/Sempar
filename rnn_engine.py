@@ -250,7 +250,7 @@ class NLCModel(object):
         # 4). Linear mix of paragraph's context vectors and paragraph states
         flat_C_p = tf.reshape(C_p, [-1, self.FLAGS.size])
         flat_p_enc = tf.reshape(p_encoding, [-1, self.FLAGS.size])
-        doshape = tf.shape(query_w_matrix)
+        doshape = tf.shape(context_w_matrix)
         T, batch_size = doshape[0], doshape[1]
 
         # mixed_p: (batch * p_len, size)
