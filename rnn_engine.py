@@ -124,7 +124,10 @@ class NLCModel(object):
                 self.setup_embeddings()
                 self.setup_encoder()
                 # this should be fine...
-                self.encoder_output = self.coattn_encode()
+                if FLAGS.co_attn:
+                    self.encoder_output = self.coattn_encode()
+                else:
+                    self.encoder_output = self.attention_encode()
                 self.setup_decoder(self.encoder_output)
                 self.setup_loss()
 
@@ -218,6 +221,44 @@ class NLCModel(object):
         out = self.normal_encode(co_att, self.ctx_mask, scope_name="Final")
 
         return out
+
+    def attention_encode(self):
+        # (length, batch_size, dim)
+        query_w_matrix = self.normal_encode(self.encoder_inputs, self.source_mask)
+        context_w_matrix = self.normal_encode(self.ctx_inputs, self.ctx_mask, reuse=True)
+
+        # can add a query variation here (optional)
+        # can take out coattention mix...but by experiment it should be better than no coattention
+
+        # in PA4 it was also time-major
+
+        # batch, p, size
+        p_encoding = tf.transpose(context_w_matrix, perm=[1, 0, 2])
+        # batch, q, size
+        q_encoding = tf.transpose(query_w_matrix, perm=[1, 0, 2])
+        # batch, size, q
+        q_encoding_t = tf.transpose(query_w_matrix, perm=[1, 2, 0])
+
+        # 2). Q->P Attention
+        # [256,25,125] vs [128,125,11]
+        A = batch_matmul(p_encoding, q_encoding_t)  # (batch, p, q)
+        A_p = tf.nn.softmax(A)
+
+        # 3). Paragrahp's context vectors
+        C_p = batch_matmul(A_p, q_encoding)
+
+        # 4). Linear mix of paragraph's context vectors and paragraph states
+        flat_C_p = tf.reshape(C_p, [-1, self.FLAGS.state_size])
+        flat_p_enc = tf.reshape(p_encoding, [-1, self.FLAGS.state_size])
+        doshape = tf.shape(query_w_matrix)
+        T, batch_size = doshape[0], doshape[1]
+
+        # mixed_p: (batch * p_len, size)
+        mixed_p = rnn_cell._linear([flat_C_p, flat_p_enc], self.FLAGS.state_size, bias=True)
+        mixed_p = tf.reshape(mixed_p, tf.pack([-1, T, self.FLAGS.state_size]))
+
+        # no extra layer of RNN on top of coattention result
+        return mixed_p
 
     def rev_coattn_encode(self):
         pass

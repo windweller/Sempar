@@ -51,7 +51,6 @@ tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during trainin
 tf.app.flags.DEFINE_integer("epochs", 3, "Number of epochs to train.")
 tf.app.flags.DEFINE_integer("size", 256, "Size of each model layer.")  # was 250
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")  # originally 2 layers
-tf.app.flags.DEFINE_integer("max_seq_len", 100, "Maximum sequence length.")
 tf.app.flags.DEFINE_string("data_dir", "data", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "sandbox", "Training directory.")
 tf.app.flags.DEFINE_string("tokenizer", "BPE", "BPE / CHAR / WORD.")
@@ -60,10 +59,11 @@ tf.app.flags.DEFINE_integer("print_every", 20, "How many iterations to do per pr
 tf.app.flags.DEFINE_integer("keep", 0, "How many checkpoints to keep, 0 indicates keep all.")
 tf.app.flags.DEFINE_string("dataset", "shrdlurn", "shrdlurn / nat")
 tf.app.flags.DEFINE_string("task", "context", "context / logic: context ignores parsing, logic only does parsing")
-tf.app.flags.DEFINE_integer("input_len", 25, "How much input do we want to keep")
+tf.app.flags.DEFINE_integer("input_len", 15, "How much input do we want to keep")
 tf.app.flags.DEFINE_integer("query_len", 35, "How much query do we want to keep")
 tf.app.flags.DEFINE_integer("beam_size", 3, "Size of beam.")
 tf.app.flags.DEFINE_boolean("print_decode", False, "print decoding result to file. Is slow.")
+tf.app.flags.DEFINE_boolean("co_attn", True, "Whether to use co-attention to encode")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -251,7 +251,7 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
 
 
 def train():
-    
+
     if not os.path.exists(FLAGS.train_dir):
         os.makedirs(FLAGS.train_dir)
     file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))
