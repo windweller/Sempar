@@ -248,14 +248,14 @@ class NLCModel(object):
         C_p = batch_matmul(A_p, q_encoding)
 
         # 4). Linear mix of paragraph's context vectors and paragraph states
-        flat_C_p = tf.reshape(C_p, [-1, self.FLAGS.state_size])
-        flat_p_enc = tf.reshape(p_encoding, [-1, self.FLAGS.state_size])
+        flat_C_p = tf.reshape(C_p, [-1, self.FLAGS.size])
+        flat_p_enc = tf.reshape(p_encoding, [-1, self.FLAGS.size])
         doshape = tf.shape(query_w_matrix)
         T, batch_size = doshape[0], doshape[1]
 
         # mixed_p: (batch * p_len, size)
-        mixed_p = rnn_cell._linear([flat_C_p, flat_p_enc], self.FLAGS.state_size, bias=True)
-        mixed_p = tf.reshape(mixed_p, tf.pack([-1, T, self.FLAGS.state_size]))
+        mixed_p = rnn_cell._linear([flat_C_p, flat_p_enc], self.FLAGS.size, bias=True)
+        mixed_p = tf.reshape(mixed_p, tf.pack([-1, T, self.FLAGS.size]))
 
         # no extra layer of RNN on top of coattention result
         return mixed_p
