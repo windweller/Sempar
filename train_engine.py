@@ -230,19 +230,19 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
 
             f1 += f1_score(best_str, " ".join(pred_env))
             # tgt_sent's first array element is always [""]
-            em += exact_match_score(best_str, " ".join(pred_env))
+            em += exact_match_score(best_str, " ".join(pred_env)[1:])
 
             if num_decoded <= sample:
                 print("cmd: {}".format(" ".join(src_sent)))
                 print("ctx: {}".format(" ".join(ctx_env)))
-                print("truth: {}".format(" ".join(pred_env)))
+                print("truth: {}".format(" ".join(pred_env)[1:]))
                 print("decoded: {}".format(best_str))
                 print("")
 
             if FLAGS.print_decode:
                 f.write("cmd: {} \r".format(" ".join(src_sent)))
                 f.write("ctx: {} \r".format(" ".join(ctx_env)))
-                f.write("truth: {} \r".format(" ".join(pred_env)))
+                f.write("truth: {} \r".format(" ".join(pred_env)[1:]))
                 f.write("decoded: {} \r".format(best_str))
                 f.write("\r")
                 f.write("\r")
