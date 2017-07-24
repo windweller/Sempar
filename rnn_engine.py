@@ -255,7 +255,7 @@ class NLCModel(object):
 
         # mixed_p: (batch * p_len, size)
         mixed_p = rnn_cell._linear([flat_C_p, flat_p_enc], self.FLAGS.size, bias=True)
-        mixed_p = tf.reshape(mixed_p, tf.pack([-1, T, self.FLAGS.size]))
+        mixed_p = tf.reshape(mixed_p, tf.pack([T, -1, self.FLAGS.size]))
 
         # no extra layer of RNN on top of coattention result
         return mixed_p
