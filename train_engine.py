@@ -49,7 +49,7 @@ tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this nor
 tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during training.")
 tf.app.flags.DEFINE_integer("epochs", 3, "Number of epochs to train.")
-tf.app.flags.DEFINE_integer("size", 125, "Size of each model layer.")  # was 250
+tf.app.flags.DEFINE_integer("size", 256, "Size of each model layer.")  # was 250
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")  # originally 2 layers
 tf.app.flags.DEFINE_integer("max_seq_len", 100, "Maximum sequence length.")
 tf.app.flags.DEFINE_string("data_dir", "data", "Data directory")
@@ -60,9 +60,10 @@ tf.app.flags.DEFINE_integer("print_every", 20, "How many iterations to do per pr
 tf.app.flags.DEFINE_integer("keep", 0, "How many checkpoints to keep, 0 indicates keep all.")
 tf.app.flags.DEFINE_string("dataset", "shrdlurn", "shrdlurn / nat")
 tf.app.flags.DEFINE_string("task", "context", "context / logic: context ignores parsing, logic only does parsing")
-tf.app.flags.DEFINE_integer("input_len", 15, "How much input do we want to keep")
+tf.app.flags.DEFINE_integer("input_len", 25, "How much input do we want to keep")
 tf.app.flags.DEFINE_integer("query_len", 35, "How much query do we want to keep")
 tf.app.flags.DEFINE_integer("beam_size", 3, "Size of beam.")
+tf.app.flags.DEFINE_boolean("print_decode", False, "print decoding result to file. Is slow.")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -238,20 +239,23 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
                 print("decoded: {}".format(best_str))
                 print("")
 
-            f.write("cmd: {} \r".format(" ".join(src_sent)))
-            f.write("ctx: {} \r".format(" ".join(ctx_env)))
-            f.write("truth: {} \r".format(" ".join(pred_env)))
-            f.write("decoded: {} \r".format(best_str))
-            f.write("\r")
-            f.write("\r")
+            if FLAGS.print_decode:
+                f.write("cmd: {} \r".format(" ".join(src_sent)))
+                f.write("ctx: {} \r".format(" ".join(ctx_env)))
+                f.write("truth: {} \r".format(" ".join(pred_env)))
+                f.write("decoded: {} \r".format(best_str))
+                f.write("\r")
+                f.write("\r")
 
     return float(f1) / float(num_decoded), float(em) / float(num_decoded)
 
 
 def train():
-    """Train a translation model using NLC data."""
-
-    # TODO: redirect logging into train_dir
+    
+    if not os.path.exists(FLAGS.train_dir):
+        os.makedirs(FLAGS.train_dir)
+    file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))
+    logging.getLogger().addHandler(file_handler)
 
     dataset = FLAGS.dataset
 
