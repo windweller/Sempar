@@ -101,17 +101,17 @@ class NLCModel(object):
 
         self.keep_prob = tf.placeholder(tf.float32)
         self.source_tokens = tf.placeholder(tf.int32, shape=[None, None], name="source_tokens")
-        # self.target_tokens = tf.placeholder(tf.int32, shape=[None, None], name="target_tokens")
+        self.target_tokens = tf.placeholder(tf.int32, shape=[None, None], name="target_tokens")
         self.source_mask = tf.placeholder(tf.int32, shape=[None, None], name="source_mask")
-        # self.target_mask = tf.placeholder(tf.int32, shape=[None, None], name="target_mask")
+        self.target_mask = tf.placeholder(tf.int32, shape=[None, None], name="target_mask")
 
         self.ctx_tokens = tf.placeholder(tf.int32, shape=[None, None], name="ctx_tokens")
-        self.pred_tokens = tf.placeholder(tf.int32, shape=[None, None], name="pred_tokens")
+        # self.pred_tokens = tf.placeholder(tf.int32, shape=[None, None], name="pred_tokens")
         self.ctx_mask = tf.placeholder(tf.int32, shape=[None, None], name="ctx_mask")
-        self.pred_mask = tf.placeholder(tf.int32, shape=[None, None], name="pred_mask")
+        # self.pred_mask = tf.placeholder(tf.int32, shape=[None, None], name="pred_mask")
 
         self.beam_size = tf.placeholder(tf.int32)
-        self.target_length = tf.reduce_sum(self.pred_mask, reduction_indices=0)
+        self.target_length = tf.reduce_sum(self.target_mask, reduction_indices=0)
 
         self.FLAGS = FLAGS
 
@@ -120,14 +120,14 @@ class NLCModel(object):
             self.decoder_state_input.append(tf.placeholder(tf.float32, shape=[None, size]))
 
         if self.task == "context":
-            with tf.variable_scope("CtxPred", initializer=tf.uniform_unit_scaling_initializer(1.0)):
+            with tf.variable_scope("CtxLogic", initializer=tf.uniform_unit_scaling_initializer(1.0)):
                 self.setup_embeddings()
                 self.setup_encoder()
                 # this should be fine...
                 if FLAGS.co_attn:
-                    self.encoder_output = self.coattn_encode()
+                    self.encoder_output = self.rev_coattn_encode()
                 else:
-                    self.encoder_output = self.attention_encode()
+                    self.encoder_output = self.rev_attention_encode()
                 self.setup_decoder(self.encoder_output)
                 self.setup_loss()
 
@@ -152,15 +152,15 @@ class NLCModel(object):
     def setup_embeddings(self):
         with vs.variable_scope("embeddings"):
             self.L_enc = tf.get_variable("L_enc", [self.src_vocab_size, self.size])
-            # self.L_dec = tf.get_variable("L_dec", [self.tgt_vocab_size, self.size])
+            self.L_dec = tf.get_variable("L_dec", [self.tgt_vocab_size, self.size])
             self.L_env = tf.get_variable("L_env", [self.env_vocab_size, self.size])
-            self.L_pred = tf.get_variable("L_pred", [self.env_vocab_size, self.size])
+            # self.L_pred = tf.get_variable("L_pred", [self.env_vocab_size, self.size])
             # we can share or not share L_env and L_pred, we seperate to observe what can happen
 
             self.encoder_inputs = embedding_ops.embedding_lookup(self.L_enc, self.source_tokens)
-            # self.target_inputs = embedding_ops.embedding_lookup(self.L_dec, self.target_tokens)
+            self.target_inputs = embedding_ops.embedding_lookup(self.L_dec, self.target_tokens)
             self.ctx_inputs = embedding_ops.embedding_lookup(self.L_env, self.ctx_tokens)
-            self.pred_inputs = embedding_ops.embedding_lookup(self.L_pred, self.pred_tokens)
+            # self.pred_inputs = embedding_ops.embedding_lookup(self.L_pred, self.pred_tokens)
 
     def setup_encoder(self):
         self.encoder_cell = rnn_cell.GRUCell(self.size)
@@ -262,8 +262,56 @@ class NLCModel(object):
         # no extra layer of RNN on top of coattention result
         return mixed_p
 
-    def rev_coattn_encode(self):
+    def rev_attention_encode(self):
+        # (length, batch_size, dim)
         pass
+
+    def rev_coattn_encode(self):
+        # let's see if this will work
+        # (length, batch_size, dim)
+        context_w_matrix = self.normal_encode(self.encoder_inputs, self.source_mask)
+        query_w_matrix = self.normal_encode(self.ctx_inputs, self.ctx_mask, reuse=True)
+
+
+        # can add a query variation here (optional)
+        # can take out coattention mix...but by experiment it should be better than no coattention
+
+        # in PA4 it was also time-major
+
+        # batch, p, size
+        p_encoding = tf.transpose(context_w_matrix, perm=[1, 0, 2])
+        # batch, q, size
+        q_encoding = tf.transpose(query_w_matrix, perm=[1, 0, 2])
+        # batch, size, q
+        q_encoding_t = tf.transpose(query_w_matrix, perm=[1, 2, 0])
+
+        # 2). Q->P Attention
+        # [256,25,125] vs [128,125,11]
+        A = batch_matmul(p_encoding, q_encoding_t)  # (batch, p, q)
+        A_p = tf.nn.softmax(A)
+
+        # 3). P->Q Attention
+        # transposed: (batch_size, question, context)
+        A_t = tf.transpose(A, perm=[0, 2, 1])  # (batch, q, p)
+        A_q = tf.nn.softmax(A_t)
+
+        # 4). Query's context vectors
+        C_q = batch_matmul(A_q, p_encoding)  # (batch, q, p) * (batch, p, size)
+        # (batch, q, size)
+
+        # 5). Paragrahp's context vectors
+        q_emb = tf.concat(2, [q_encoding, C_q])
+        C_p = batch_matmul(A_p, q_emb)  # (batch, p, q) * (batch, q, size * 2)
+
+        # 6). Linear mix of paragraph's context vectors and paragraph states
+        co_att = tf.concat(2, [p_encoding, C_p])  # (batch, p, size * 3)
+
+        # This must be another RNN layer
+        # however, if it's just normal attention, we don't need to use a different one
+        co_att = tf.transpose(co_att, perm=[1, 0, 2])  # (p, batch, size * 3)
+        out = self.normal_encode(co_att, self.source_mask, scope_name="Final")
+
+        return out
 
     def setup_decoder(self, encoder_output):
         if self.num_layers > 1:
@@ -271,7 +319,7 @@ class NLCModel(object):
         self.attn_cell = GRUCellAttn(self.size, encoder_output, scope="DecoderAttnCell")
         i = -1
         with vs.variable_scope("Decoder"):
-            inp = self.pred_inputs
+            inp = self.target_inputs
             for i in xrange(self.num_layers - 1):
                 with vs.variable_scope("DecoderCell%d" % i) as scope:
                     out, state_output = rnn.dynamic_rnn(self.decoder_cell, inp, time_major=True,
@@ -321,7 +369,7 @@ class NLCModel(object):
         def beam_step(time, beam_probs, beam_seqs, cand_probs, cand_seqs, *states):
             batch_size = tf.shape(beam_probs)[0]
             inputs = tf.reshape(tf.slice(beam_seqs, [0, time], [batch_size, 1]), [batch_size])
-            decoder_input = embedding_ops.embedding_lookup(self.L_pred, inputs) # self.L_env
+            decoder_input = embedding_ops.embedding_lookup(self.L_dec, inputs) # self.L_env
             decoder_output, state_output = self.decoder_graph(decoder_input, states)
 
             with vs.variable_scope("Logistic", reuse=True):
@@ -383,8 +431,8 @@ class NLCModel(object):
             outputs2d = tf.nn.log_softmax(logits2d)
             self.outputs = tf.reshape(outputs2d, tf.pack([T, batch_size, self.tgt_vocab_size]))
 
-            targets_no_GO = tf.slice(self.pred_tokens, [1, 0], [-1, -1])
-            masks_no_GO = tf.slice(self.pred_mask, [1, 0], [-1, -1])
+            targets_no_GO = tf.slice(self.target_tokens, [1, 0], [-1, -1])
+            masks_no_GO = tf.slice(self.target_mask, [1, 0], [-1, -1])
             # easier to pad target/mask than to split decoder input since tensorflow does not support negative indexing
             labels1d = tf.reshape(tf.pad(targets_no_GO, [[0, 1], [0, 0]]), [-1])
             mask1d = tf.reshape(tf.pad(masks_no_GO, [[0, 1], [0, 0]]), [-1])
@@ -419,17 +467,17 @@ class NLCModel(object):
         for i in xrange(self.num_layers):
             input_feed[self.decoder_state_input[i]] = default_value
 
-    def train_engine(self, session, source_tokens, source_mask, ctx_tokens, ctx_mask, pred_tokens, pred_mask):
+    def train_engine(self, session, source_tokens, source_mask, ctx_tokens, ctx_mask, target_tokens, target_mask):
         input_feed = {}
         input_feed[self.source_tokens] = source_tokens
         input_feed[self.ctx_tokens] = ctx_tokens
-        input_feed[self.pred_tokens] = pred_tokens
+        input_feed[self.target_tokens] = target_tokens
         input_feed[self.source_mask] = source_mask
         input_feed[self.ctx_mask] = ctx_mask
-        input_feed[self.pred_mask] = pred_mask
+        input_feed[self.target_mask] = target_mask
 
         input_feed[self.keep_prob] = self.keep_prob_config
-        self.set_default_decoder_state_input(input_feed, pred_tokens.shape[1])
+        self.set_default_decoder_state_input(input_feed, target_tokens.shape[1])
 
         output_feed = [self.updates, self.gradient_norm, self.losses, self.param_norm]
 
@@ -437,18 +485,18 @@ class NLCModel(object):
 
         return outputs[1], outputs[2], outputs[3]
 
-    def test_engine(self, session, source_tokens, source_mask, ctx_tokens, ctx_mask, pred_tokens, pred_mask):
+    def test_engine(self, session, source_tokens, source_mask, ctx_tokens, ctx_mask, target_tokens, target_mask):
         input_feed = {}
         input_feed[self.source_tokens] = source_tokens
         input_feed[self.ctx_tokens] = ctx_tokens
-        input_feed[self.pred_tokens] = pred_tokens
+        input_feed[self.target_tokens] = target_tokens
 
         input_feed[self.source_mask] = source_mask
         input_feed[self.ctx_mask] = ctx_mask
-        input_feed[self.pred_mask] = pred_mask
+        input_feed[self.target_mask] = target_mask
 
         input_feed[self.keep_prob] = 1.
-        self.set_default_decoder_state_input(input_feed, pred_tokens.shape[1])
+        self.set_default_decoder_state_input(input_feed, target_tokens.shape[1])
 
         output_feed = [self.losses]
 
@@ -456,7 +504,7 @@ class NLCModel(object):
 
         return outputs[0]
 
-    def encode_engine(self, session, source_tokens, source_mask, ctx_tokens, ctx_mask):
+    def encode(self, session, source_tokens, source_mask, ctx_tokens, ctx_mask):
         input_feed = {}
         input_feed[self.source_tokens] = source_tokens
         input_feed[self.ctx_tokens] = ctx_tokens

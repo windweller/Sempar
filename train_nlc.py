@@ -215,8 +215,6 @@ def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, 
 def train():
     """Train a translation model using NLC data."""
 
-    # TODO: build co-attention and reverse co-attention model for context
-
     dataset = FLAGS.dataset
 
     logging.info("Preparing %s data in %s" % (FLAGS.dataset, FLAGS.data_dir))

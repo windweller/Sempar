@@ -188,8 +188,8 @@ def detokenize(sents, reverse_vocab, decode=False):
     return [detok_sent(s) for s in sents]
 
 
-def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
-                           reverse_tgt_vocab, reverse_env_vocab, save_dir, epoch, sample=5):
+def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
+                          reverse_tgt_vocab, reverse_env_vocab, save_dir, epoch, sample=5):
     num_decoded = 0
 
     # add f1, em measure on this decoding
@@ -219,7 +219,7 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
             pred_env = detokenize(pred_tokens, reverse_env_vocab)
 
             # Encode
-            encoder_output = model.encode_engine(sess, source_tokens, source_mask, ctx_tokens, ctx_mask)
+            encoder_output = model.encode(sess, source_tokens, source_mask, ctx_tokens, ctx_mask)
             # Decode
             beam_toks, probs = decode_beam(model, sess, encoder_output, FLAGS.beam_size)
             # De-tokenize
@@ -229,21 +229,21 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
 
             num_decoded += 1
 
-            f1 += f1_score(best_str, " ".join(pred_env))
+            f1 += f1_score(best_str, " ".join(tgt_sent[1:]))
             # tgt_sent's first array element is always [""]
-            em += exact_match_score(best_str, " ".join(pred_env)[1:])
+            em += exact_match_score(best_str, " ".join(tgt_sent[1:]))
 
             if num_decoded <= sample:
                 print("cmd: {}".format(" ".join(src_sent)))
                 print("ctx: {}".format(" ".join(ctx_env)))
-                print("truth: {}".format(" ".join(pred_env)[1:]))
+                print("truth: {}".format(" ".join(tgt_sent[1:])))
                 print("decoded: {}".format(best_str))
                 print("")
 
             if FLAGS.print_decode:
                 f.write("cmd: {} \r".format(" ".join(src_sent)))
                 f.write("ctx: {} \r".format(" ".join(ctx_env)))
-                f.write("truth: {} \r".format(" ".join(pred_env)[1:]))
+                f.write("truth: {} \r".format(" ".join(tgt_sent[1:])))
                 f.write("decoded: {} \r".format(best_str))
                 f.write("\r")
                 f.write("\r")
@@ -331,7 +331,7 @@ def train():
                 tic = time.time()
 
                 grad_norm, cost, param_norm = model.train_engine(sess, source_tokens.T, source_mask.T, ctx_tokens.T,
-                                                                 ctx_mask.T, pred_tokens.T, pred_mask.T)
+                                                                 ctx_mask.T, target_tokens.T, target_mask.T)
 
                 toc = time.time()
                 iter_time = toc - tic
@@ -367,8 +367,8 @@ def train():
             valid_cost = validate(model, sess, q_valid)
 
             # Validate by decoding
-            f1, em = decode_validate_engine(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
-                                            decode_save_dir, epoch, sample=5)
+            f1, em = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+                                           decode_save_dir, epoch, sample=5)
 
             logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
 

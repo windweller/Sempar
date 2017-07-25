@@ -337,7 +337,7 @@ def train():
                 iter_time = toc - tic
                 current_step += 1
 
-                lengths = np.sum(target_mask, axis=0)
+                lengths = np.sum(pred_mask, axis=0)
                 mean_length = np.mean(lengths)
                 std_length = np.std(lengths)
 
