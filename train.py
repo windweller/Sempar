@@ -22,7 +22,7 @@ tf.app.flags.DEFINE_integer("epochs", 5, "Number of epochs to train.")
 tf.app.flags.DEFINE_integer("curr_epoch", 0, "Start at epoch n.")
 tf.app.flags.DEFINE_integer("size", 200, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("input_len", 15, "How much input do we want to keep")
-tf.app.flags.DEFINE_integer("query_len", 40, "How much context do we want to keep")  # 400
+tf.app.flags.DEFINE_integer("query_len", 35, "How much query do we want to keep")  # 400
 tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
 tf.app.flags.DEFINE_string("optimizer", "adam", "adam / sgd")
 tf.app.flags.DEFINE_string("dataset", "shrdlurn", "shrdlurn / nat")

@@ -4,6 +4,8 @@
 # just need to load them in, no need to shuffle again
 # no need to use pair_iter
 
+# TODO: debug here
+
 from data_util import initialize_vocabulary
 import time
 import logging
@@ -25,6 +27,16 @@ from tensorflow.python.ops import rnn_cell
 
 from util import exact_match_score, f1_score
 
+_PAD = b"<pad>"
+_SOS = b"<sos>"
+_EOS = b"<eos>"
+_UNK = b"<unk>"
+_START_VOCAB = [_PAD, _SOS, _EOS, _UNK]
+
+PAD_ID = 0
+SOS_ID = 1
+EOS_ID = 2
+UNK_ID = 3
 
 def get_optimizer(opt):
     if opt == "adam":
@@ -35,6 +47,24 @@ def get_optimizer(opt):
         assert (False)
     return optfn
 
+def bidirectional_rnn(cell, inputs, lengths, scope=None):
+    name = scope.name or "BiRNN"
+    # Forward direction
+    with vs.variable_scope(name + "_FW") as fw_scope:
+      output_fw, output_state_fw = rnn.dynamic_rnn(cell, inputs, time_major=False, dtype=tf.float32,
+                                                   sequence_length=lengths, scope=fw_scope)
+    # Backward direction
+    inputs_bw = tf.reverse_sequence(inputs, tf.to_int64(lengths), seq_dim=1, batch_dim=0)
+    with vs.variable_scope(name + "_BW") as bw_scope:
+      output_bw, output_state_bw = rnn.dynamic_rnn(cell, inputs_bw, time_major=False, dtype=tf.float32,
+                                                   sequence_length=lengths, scope=bw_scope)
+
+    output_bw = tf.reverse_sequence(output_bw, tf.to_int64(lengths), seq_dim=1, batch_dim=0)
+
+    outputs = output_fw + output_bw
+    output_state = output_state_fw + output_state_bw
+
+    return (outputs, output_state)
 
 class Encoder(object):
     def __init__(self, size):
@@ -64,19 +94,20 @@ class Encoder(object):
             mask = masks
 
             with vs.variable_scope("EncoderCell") as scope:
-                srclen = tf.reduce_sum(mask, reduction_indices=0)
+                srclen = tf.reduce_sum(mask, reduction_indices=1)
                 (fw_out, bw_out), (fw_states, bw_states) = tf.nn.bidirectional_dynamic_rnn(self.encoder_cell,
                                                                                            self.encoder_cell, inp,
                                                                                            srclen,
                                                                                            scope=scope,
                                                                                            time_major=False,
                                                                                            dtype=tf.float32)
+
                 out = fw_out + bw_out
+                states = fw_states + bw_states
+
                 out = self.dropout(out)
 
-            encoder_outputs = self.dropout(fw_states + bw_states)
-
-        return out, encoder_outputs
+        return out, states
 
     def dropout(self, inp):
         return tf.nn.dropout(inp, self.keep_prob)
@@ -327,34 +358,42 @@ class Seq2SeqNeuralParser(object):
 
     def decode_greedy_batch(self, sess, encoder_output, batch_size):
         decoder_state = None
-        decoder_input = np.array([data_util.SOS_ID, ] * batch_size, dtype=np.int32)
 
+        decoder_input = np.array([data_util.SOS_ID, ] * batch_size, dtype=np.int32).reshape([batch_size, 1])
         output_sent = np.array([data_util.PAD_ID, ] * self.query_len
                                * batch_size, dtype=np.int32).reshape([batch_size, self.query_len])
-        dones = np.array([True, ] * self.batch_size, dtype=np.bool)
-        i = 0
-        while True:
+
+        # (batch_size, )
+        # dones = np.array([False,] * self.batch_size, dtype=np.bool)
+
+        # just check the last time step
+        print(encoder_output[:, 3, :])
+
+        for i in range(self.query_len):
             decoder_output, decoder_state = self.decode(sess, encoder_output, decoder_input,
                                                                    decoder_states=decoder_state)
 
-            # decoder_output shape: (1, batch_size, vocab_size)
+            # decoder_output shape: (batch_size, 1, vocab_size)
             token_highest_prob = np.argmax(np.squeeze(decoder_output), axis=1)
 
             # token_highest_prob shape: (batch_size,)
-            mask = token_highest_prob == data_util.EOS_ID
-            update_dones_indices = np.nonzero(mask)
+            # mask = token_highest_prob == data_util.EOS_ID
+            # update_dones_indices = np.invert(mask)
             # update on newly finished sentence, add EOS_ID
-            new_finished = update_dones_indices != dones
-            output_sent[i, new_finished] = data_util.EOS_ID
+            # new_finished = update_dones_indices != dones
+            # output_sent[i, new_finished] = data_util.EOS_ID
 
-            dones[update_dones_indices] = False
-            if i >= self.query_len - 1 or np.sum(np.nonzero(dones)) == 0:
-                break
+            # dones[update_dones_indices] = False
+            # if i >= self.query_len - 1 or np.sum(np.nonzero(dones)) == 0:
+            #     break
 
-            output_sent[i, dones] = token_highest_prob
-            decoder_input = token_highest_prob.reshape([1, batch_size])
-            i += 1
+            output_sent[:, i] = token_highest_prob
+            # the decoder_state for each elem in the batch should be different...hmmm
+            # is the encoder output completely the SAME?
+            # print(decoder_state)
+            decoder_input = token_highest_prob.reshape([batch_size, 1])
 
+        sys.exit(0)
         return output_sent
 
     def get_encode(self, session, inp_tokens, inp_mask):
@@ -369,16 +408,16 @@ class Seq2SeqNeuralParser(object):
 
         return outputs[0]
 
-    def decode(self, session, inp_tokens, query_tokens, query_mask=None, decoder_states=None):
+    def decode(self, session, encoder_output, query_tokens, query_mask=None, decoder_states=None):
         input_feed = {}
-        input_feed[self.inp_tokens] = inp_tokens
+        input_feed[self.encoder_output] = encoder_output
         input_feed[self.query_tokens] = query_tokens
         input_feed[self.query_mask] = query_mask if query_mask is not None else np.ones_like(query_tokens)
 
         input_feed[self.encoder.keep_prob] = 1.
         input_feed[self.decoder.keep_prob] = 1.
 
-        output_feed = [self.outputs] + + self.decoder.decoder_state_output
+        output_feed = [self.outputs] + self.decoder.decoder_state_output
 
         if decoder_states is None:
             self.decoder.set_default_decoder_state_input(input_feed, query_tokens.shape[0])
@@ -390,41 +429,57 @@ class Seq2SeqNeuralParser(object):
 
         return outputs[0], outputs[1:]
 
+    def detokenize(self, toks, reverse_vocab):
+        # detokenize the decoder output, not batched anymore
+        outsent = ""
+        for i in range(toks.shape[0]):
+            if toks[i] == EOS_ID:
+                break
+            if toks[i] >= len(_START_VOCAB) and toks[i] != _PAD:
+                outsent += reverse_vocab[toks[i]]
+        return outsent
+
     def evaluate_answer(self, session, q, rev_src_vocab, rev_tgt_vocab, sample=100, print_every=100):
         # this is teacher-forcing evaluation, not even greedy decode
         f1 = 0.
         em = 0.
         size = 0.
 
+        # python list: outputs = outputs[:outputs.index(data_utils.EOS_ID)]
+        # but must make sure EOS_ID is in there otherwise this throws an error
+
         for inp_tokens, inp_mask, query_tokens, query_mask in pair_iter(q, self.batch_size, self.inp_len,
                                                                         self.query_len):
             # decoder_output = self.decode(session, inp_tokens, inp_mask, query_tokens, query_mask)
             encoder_output = self.get_encode(session, inp_tokens, inp_mask)
             decoder_output = self.decode_greedy_batch(session, encoder_output, self.batch_size)
+            print(decoder_output)
 
             # decoder_tokens = np.argmax(decoder_output, axis=-1)
-            decoder_tokens = decoder_output
 
             # those are batched right now
             # decoder_tokens = np.squeeze(decoder_tokens) * query_mask
             # query_tokens = query_tokens * query_mask
 
             batch_size = inp_tokens.shape[0]
-            query_len = np.sum(query_mask, axis=1)
+            # query_len = np.sum(query_mask, axis=1)
 
             for i in range(batch_size):
-                f1 += f1_score(str(decoder_tokens[i, 1:query_len[i]-1]), str(query_tokens[i, 1:query_len[i]-1]))
-                em += exact_match_score(str(decoder_tokens[i, 1:query_len[i]-1]), str(query_tokens[i, 1:query_len[i]-1]))
+                decoder_token = self.detokenize(decoder_output[i,:], rev_tgt_vocab)
+                query_token = self.detokenize(query_tokens[i,:], rev_tgt_vocab)
+
+                f1 += f1_score(decoder_token, query_token)
+                em += exact_match_score(decoder_token, query_token)
 
                 size += 1
 
                 if size % print_every == 0:
-                    decoded_parse = [rev_tgt_vocab[j] for j in decoder_tokens[i, 1:-1] if j != data_util.PAD_ID]
-                    true_parse = [rev_tgt_vocab[j] for j in query_tokens[i, 1:-1] if j != data_util.PAD_ID]
+                    decoded_parse = decoder_token
+                    true_parse = query_token
                     decoded_input = [rev_src_vocab[j] for j in inp_tokens[i, :] if j != data_util.PAD_ID]
                     print("input: {}".format(" ".join(decoded_input)))
-                    print("decoded result: {}".format(" ".join(decoded_parse)))
-                    print("ground truth result: {}".format(" ".join(true_parse)))
+                    print("decoded result: {}".format(decoded_parse))
+                    print("ground truth result: {}".format(true_parse))
 
             if size >= sample:
                 break
