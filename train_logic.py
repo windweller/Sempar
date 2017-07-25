@@ -33,7 +33,7 @@ from six.moves import xrange
 import tensorflow as tf
 from os.path import join as pjoin
 
-import rnn_engine
+import rnn_logic
 from data_util import initialize_vocabulary
 import data_util
 
@@ -81,7 +81,7 @@ UNK_ID = 3
 
 
 def create_model(session, src_vocab_size, tgt_vocab_size, env_vocab_size, forward_only):
-    model = rnn_engine.NLCModel(
+    model = rnn_logic.NLCModel(
         src_vocab_size, tgt_vocab_size, env_vocab_size, FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
         FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.dropout, FLAGS,
         forward_only=forward_only, optimizer=FLAGS.optimizer)
