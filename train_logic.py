@@ -223,7 +223,7 @@ def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
             # Decode
             beam_toks, probs = decode_beam(model, sess, encoder_output, FLAGS.beam_size)
             # De-tokenize
-            beam_strs = detokenize(beam_toks, reverse_env_vocab, decode=True)
+            beam_strs = detokenize(beam_toks, reverse_tgt_vocab, decode=True)
 
             best_str = beam_strs[0]  # we can also get probability on them
 
