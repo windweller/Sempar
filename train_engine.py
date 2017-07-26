@@ -239,11 +239,11 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
             em += exact_match_score(best_str, " ".join(pred_env)[1:])
 
             if num_decoded <= sample:
-                print("cmd: {}".format(" ".join(src_sent)))
-                print("ctx: {}".format(" ".join(ctx_env)))
-                print("truth: {}".format(" ".join(pred_env)[1:]))
-                print("decoded: {}".format(best_str))
-                print("")
+                logging.info("cmd: {}".format(" ".join(src_sent)))
+                logging.info("ctx: {}".format(" ".join(ctx_env)))
+                logging.info("truth: {}".format(" ".join(pred_env)[1:]))
+                logging.info("decoded: {}".format(best_str))
+                logging.info("")
 
             if print_decode:
                 f.write("cmd: {} \r".format(" ".join(src_sent)))

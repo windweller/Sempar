@@ -209,10 +209,10 @@ def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, 
             em += exact_match_score(best_str, " ".join(tgt_sent[1:]))
 
             if num_decoded <= sample:
-                print("input: {}".format(" ".join(src_sent)))
-                print("truth: {}".format(" ".join(tgt_sent[1:])))
-                print("decoded: {}".format(best_str))
-                print("")
+                logging.info("input: {}".format(" ".join(src_sent)))
+                logging.info("truth: {}".format(" ".join(tgt_sent[1:])))
+                logging.info("decoded: {}".format(best_str))
+                logging.info("")
 
             if print_decode:
                 f.write("input: {} \r".format(" ".join(src_sent)))
