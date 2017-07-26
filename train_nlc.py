@@ -13,8 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-# TODO: add dev, and output printing to this file
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -270,83 +268,98 @@ def train():
         # can't load old model, this part is broken but we don't mind right now...
         model = create_model(sess, len(rev_src_vocab), len(rev_tgt_vocab), False)
 
-        logging.info('Initial validation cost: %f' % validate(model, sess, q_valid))
+        # manually load best epoch here
+        if FLAGS.restore_checkpoint is not None:
+            model.saver.restore(sess, FLAGS.restore_checkpoint)
 
-        if False:
-            tic = time.time()
-            params = tf.trainable_variables()
-            num_params = sum(map(lambda t: np.prod(tf.shape(t.value()).eval()), params))
-            toc = time.time()
-            print("Number of params: %d (retreival took %f secs)" % (num_params, toc - tic))
+        if not FLAGS.dev:
 
-        epoch = 0
-        best_epoch = 0
-        previous_losses = []
-        exp_cost = None
-        exp_length = None
-        exp_norm = None
-        while (FLAGS.epochs == 0 or epoch < FLAGS.epochs):
-            epoch += 1
-            current_step = 0
+            logging.info('Initial validation cost: %f' % validate(model, sess, q_valid))
 
-            ## Train
-            epoch_tic = time.time()
-            for source_tokens, source_mask, target_tokens, target_mask in pair_iter(q_train, FLAGS.batch_size,
-                                                                                    FLAGS.input_len, FLAGS.query_len):
-                # Get a batch and make a step.
+            if False:
                 tic = time.time()
-
-                grad_norm, cost, param_norm = model.train(sess, source_tokens.T, source_mask.T, target_tokens.T, target_mask.T)
-
+                params = tf.trainable_variables()
+                num_params = sum(map(lambda t: np.prod(tf.shape(t.value()).eval()), params))
                 toc = time.time()
-                iter_time = toc - tic
-                current_step += 1
+                print("Number of params: %d (retreival took %f secs)" % (num_params, toc - tic))
 
-                lengths = np.sum(target_mask, axis=0)
-                mean_length = np.mean(lengths)
-                std_length = np.std(lengths)
+            epoch = 0
+            best_epoch = 0
+            previous_losses = []
+            exp_cost = None
+            exp_length = None
+            exp_norm = None
+            while (FLAGS.epochs == 0 or epoch < FLAGS.epochs):
+                epoch += 1
+                current_step = 0
 
-                if not exp_cost:
-                    exp_cost = cost
-                    exp_length = mean_length
-                    exp_norm = grad_norm
+                ## Train
+                epoch_tic = time.time()
+                for source_tokens, source_mask, target_tokens, target_mask in pair_iter(q_train, FLAGS.batch_size,
+                                                                                        FLAGS.input_len, FLAGS.query_len):
+                    # Get a batch and make a step.
+                    tic = time.time()
+
+                    grad_norm, cost, param_norm = model.train(sess, source_tokens.T, source_mask.T, target_tokens.T, target_mask.T)
+
+                    toc = time.time()
+                    iter_time = toc - tic
+                    current_step += 1
+
+                    lengths = np.sum(target_mask, axis=0)
+                    mean_length = np.mean(lengths)
+                    std_length = np.std(lengths)
+
+                    if not exp_cost:
+                        exp_cost = cost
+                        exp_length = mean_length
+                        exp_norm = grad_norm
+                    else:
+                        exp_cost = 0.99 * exp_cost + 0.01 * cost
+                        exp_length = 0.99 * exp_length + 0.01 * mean_length
+                        exp_norm = 0.99 * exp_norm + 0.01 * grad_norm
+
+                    cost = cost / mean_length
+
+                    if current_step % FLAGS.print_every == 0:
+                        logging.info(
+                            'epoch %d, iter %d, cost %f, exp_cost %f, grad norm %f, param norm %f, batch time %f, length mean/std %f/%f' %
+                            (epoch, current_step, cost, exp_cost / exp_length, grad_norm, param_norm, iter_time,
+                                mean_length,
+                                std_length))
+                epoch_toc = time.time()
+
+                ## Checkpoint
+                checkpoint_path = os.path.join(FLAGS.train_dir, "best.ckpt")
+
+                ## Validate
+                valid_cost = validate(model, sess, q_valid)
+
+                # Validate by decoding
+                f1, em = decode_validate(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, decode_save_dir, epoch, sample=5)
+
+                logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
+
+                logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
+
+                if len(previous_losses) > 2 and valid_cost > previous_losses[-1]:
+                    logging.info("Annealing learning rate by %f" % FLAGS.learning_rate_decay_factor)
+                    sess.run(model.learning_rate_decay_op)
+                    model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
                 else:
-                    exp_cost = 0.99 * exp_cost + 0.01 * cost
-                    exp_length = 0.99 * exp_length + 0.01 * mean_length
-                    exp_norm = 0.99 * exp_norm + 0.01 * grad_norm
-
-                cost = cost / mean_length
-
-                if current_step % FLAGS.print_every == 0:
-                    logging.info(
-                        'epoch %d, iter %d, cost %f, exp_cost %f, grad norm %f, param norm %f, batch time %f, length mean/std %f/%f' %
-                        (epoch, current_step, cost, exp_cost / exp_length, grad_norm, param_norm, iter_time,
-                            mean_length,
-                            std_length))
-            epoch_toc = time.time()
-
-            ## Checkpoint
-            checkpoint_path = os.path.join(FLAGS.train_dir, "best.ckpt")
-
-            ## Validate
+                    previous_losses.append(valid_cost)
+                    best_epoch = epoch
+                    model.saver.save(sess, checkpoint_path, global_step=epoch)
+                sys.stdout.flush()
+        else:
             valid_cost = validate(model, sess, q_valid)
 
+            logging.info("Final Validation cost: %f" % valid_cost)
+
             # Validate by decoding
-            f1, em = decode_validate(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, decode_save_dir, epoch, sample=5)
-
-            logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
-
+            f1, em = decode_validate(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab,
+                                            decode_save_dir, FLAGS.best_epoch, sample=5, print_decode=True)
             logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
-
-            if len(previous_losses) > 2 and valid_cost > previous_losses[-1]:
-                logging.info("Annealing learning rate by %f" % FLAGS.learning_rate_decay_factor)
-                sess.run(model.learning_rate_decay_op)
-                model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
-            else:
-                previous_losses.append(valid_cost)
-                best_epoch = epoch
-                model.saver.save(sess, checkpoint_path, global_step=epoch)
-            sys.stdout.flush()
 
 
 def main(_):
