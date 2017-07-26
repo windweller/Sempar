@@ -63,7 +63,8 @@ tf.app.flags.DEFINE_integer("input_len", 15, "How much input do we want to keep"
 tf.app.flags.DEFINE_integer("query_len", 35, "How much query do we want to keep")
 tf.app.flags.DEFINE_integer("beam_size", 3, "Size of beam.")
 tf.app.flags.DEFINE_boolean("print_decode", False, "print decoding result to file. Is slow.")
-tf.app.flags.DEFINE_boolean("co_attn", True, "Whether to use co-attention to encode")
+tf.app.flags.DEFINE_boolean("co_attn", False, "Whether to use co-attention to encode")
+tf.app.flags.DEFINE_boolean("seq", False, "Whether to sequence encode")
 tf.app.flags.DEFINE_integer("seed", 123, "random seed to use")
 
 FLAGS = tf.app.flags.FLAGS
