@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-# WARNING: this is a modification of NLC's training file
+# TODO: add dev, and output printing to this file
 
 from __future__ import absolute_import
 from __future__ import division
@@ -66,6 +66,7 @@ tf.app.flags.DEFINE_integer("seed", 123, "random seed to use")
 tf.app.flags.DEFINE_boolean("dev", False, "Skip training and generate output files to eval folder")
 tf.app.flags.DEFINE_integer("best_epoch", 0, "Specify the best epoch to use")
 tf.app.flags.DEFINE_string("restore_checkpoint", None, "checkpoint file to restore model parameters from")
+tf.app.flags.DEFINE_boolean("print_decode", False, "print decoding result to file. Is slow.")
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -173,7 +174,10 @@ def detokenize(sents, reverse_vocab, decode=False):
   return [detok_sent(s) for s in sents]
 
 
-def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, save_dir, epoch, sample=5):
+def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, save_dir,
+                    epoch, sample=5, print_decode=False):
+
+    print_decode = print_decode if print_decode else FLAGS.print_decode
     num_decoded = 0
 
     # add f1, em measure on this decoding
@@ -212,11 +216,12 @@ def decode_validate(model, sess, q_valid, reverse_src_vocab, reverse_tgt_vocab, 
                 print("decoded: {}".format(best_str))
                 print("")
 
-            f.write("input: {} \r".format(" ".join(src_sent)))
-            f.write("truth: {} \r".format(" ".join(tgt_sent[1:])))
-            f.write("decoded: {} \r".format(best_str))
-            f.write("\r")
-            f.write("\r")
+            if print_decode:
+                f.write("input: {} \r".format(" ".join(src_sent)))
+                f.write("truth: {} \r".format(" ".join(tgt_sent[1:])))
+                f.write("decoded: {} \r".format(best_str))
+                f.write("\r")
+                f.write("\r")
 
     return float(f1) / float(num_decoded), float(em) / float(num_decoded)
 
