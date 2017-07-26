@@ -129,6 +129,8 @@ class NLCModel(object):
                     self.encoder_output = self.rev_coattn_encode()
                 elif FLAGS.seq:
                     self.encoder_output = self.sequence_encode()
+                elif FLAGS.cat_attn:
+                    self.encoder_output = self.concate_encode()
                 else:
                     self.encoder_output = self.rev_attention_encode()  # ha, attention is the "normal" case
                 self.setup_decoder(self.encoder_output)
@@ -315,6 +317,17 @@ class NLCModel(object):
                                             scope_name="Query", init_state=ctx_state)
 
         return query_w_matrix
+
+    def concate_encode(self):
+        context_w_matrix, ctx_state = self.normal_encode(self.ctx_inputs, self.ctx_mask, scope_name="Ctx",
+                                                         return_state=True)
+
+        query_w_matrix = self.normal_encode(self.encoder_inputs, self.source_mask,
+                                            scope_name="Query", init_state=ctx_state)
+
+        # (length, batch_size, size)
+        concat_w_matrix = tf.concat(0, [context_w_matrix, query_w_matrix])
+        return concat_w_matrix
 
     def rev_coattn_encode(self):
         # let's see if this will work
