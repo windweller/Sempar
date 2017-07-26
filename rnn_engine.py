@@ -126,6 +126,11 @@ class NLCModel(object):
                 # this should be fine...
                 if FLAGS.co_attn:
                     self.encoder_output = self.coattn_encode()
+                elif FLAGS.seq:
+                    self.encoder_output = self.sequence_encode()
+                elif FLAGS.no_query:
+                    # this is the null hypothesis
+                    self.encoder_output = self.no_query_encode()
                 else:
                     self.encoder_output = self.attention_encode()
                 self.setup_decoder(self.encoder_output)
@@ -165,7 +170,7 @@ class NLCModel(object):
     def setup_encoder(self):
         self.encoder_cell = rnn_cell.GRUCell(self.size)
 
-    def normal_encode(self, input, mask, reuse=False, scope_name=""):
+    def normal_encode(self, input, mask, reuse=False, scope_name="", init_state=None, return_state=False):
         # note that input: [length, batch_size, dim]
         with vs.variable_scope(scope_name + "Encoder", reuse=reuse):
             inp = input
@@ -173,9 +178,27 @@ class NLCModel(object):
             for i in xrange(self.num_layers):
                 with vs.variable_scope("EncoderCell%d" % i) as scope:
                     srclen = tf.reduce_sum(mask, reduction_indices=0)
-                    out, _ = self.bidirectional_rnn(self.encoder_cell, inp, srclen, scope=scope)
+                    out, f_state = self.bidirectional_rnn(self.encoder_cell, inp, srclen, scope=scope,
+                                                          init_state=init_state)
                     inp = self.dropout(out)
+        if return_state:
+            return out, f_state
         return out
+
+    def sequence_encode(self):
+        # this is the normal sequential encode, by passing in initial state
+        # note that since this is bidirectional RNN, we pass init state for both forward
+        # and backward passing
+        context_w_matrix, ctx_state = self.normal_encode(self.ctx_inputs, self.ctx_mask, scope_name="Ctx",
+                                                         return_state=True)
+        query_w_matrix = self.normal_encode(self.encoder_inputs, self.source_mask,
+                                            scope_name="Query", init_state=ctx_state)
+
+        return query_w_matrix
+
+    def no_query_encode(self):
+        context_w_matrix = self.normal_encode(self.ctx_tokens, self.ctx_mask, scope_name="Ctx")
+        return context_w_matrix
 
     def coattn_encode(self):
         # only for task: direct prediction
@@ -395,17 +418,19 @@ class NLCModel(object):
     def dropout(self, inp):
         return tf.nn.dropout(inp, self.keep_prob)
 
-    def bidirectional_rnn(self, cell, inputs, lengths, scope=None):
+    def bidirectional_rnn(self, cell, inputs, lengths, scope=None, init_state=None):
         name = scope.name or "BiRNN"
         # Forward direction
         with vs.variable_scope(name + "_FW") as fw_scope:
             output_fw, output_state_fw = rnn.dynamic_rnn(cell, inputs, time_major=True, dtype=dtypes.float32,
-                                                         sequence_length=lengths, scope=fw_scope)
+                                                         sequence_length=lengths, scope=fw_scope,
+                                                         initial_state=init_state)
         # Backward direction
         inputs_bw = tf.reverse_sequence(inputs, tf.to_int64(lengths), seq_dim=0, batch_dim=1)
         with vs.variable_scope(name + "_BW") as bw_scope:
             output_bw, output_state_bw = rnn.dynamic_rnn(cell, inputs_bw, time_major=True, dtype=dtypes.float32,
-                                                         sequence_length=lengths, scope=bw_scope)
+                                                         sequence_length=lengths, scope=bw_scope,
+                                                         initial_state=init_state)
 
         output_bw = tf.reverse_sequence(output_bw, tf.to_int64(lengths), seq_dim=0, batch_dim=1)
 
