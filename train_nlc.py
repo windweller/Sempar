@@ -63,6 +63,10 @@ tf.app.flags.DEFINE_integer("input_len", 15, "How much input do we want to keep"
 tf.app.flags.DEFINE_integer("query_len", 35, "How much query do we want to keep")
 tf.app.flags.DEFINE_integer("beam_size", 3, "Size of beam.")
 tf.app.flags.DEFINE_integer("seed", 123, "random seed to use")
+tf.app.flags.DEFINE_boolean("dev", False, "Skip training and generate output files to eval folder")
+tf.app.flags.DEFINE_integer("best_epoch", 0, "Specify the best epoch to use")
+tf.app.flags.DEFINE_string("restore_checkpoint", None, "checkpoint file to restore model parameters from")
+
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -83,8 +87,11 @@ def create_model(session, src_vocab_size, tgt_vocab_size, forward_only):
         src_vocab_size, tgt_vocab_size, FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
         FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.dropout, FLAGS,
         forward_only=forward_only, optimizer=FLAGS.optimizer)
+
     ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-    if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
+    v2_path = ckpt.model_checkpoint_path + ".index" if ckpt else ""
+
+    if ckpt and (tf.gfile.Exists(ckpt.model_checkpoint_path) or tf.gfile.Exists(v2_path)):
         logging.info("Reading model parameters from %s" % ckpt.model_checkpoint_path)
         model.saver.restore(session, ckpt.model_checkpoint_path)
     else:
@@ -98,7 +105,7 @@ def validate(model, sess, q_valid):
     valid_costs, valid_lengths = [], []
     for source_tokens, source_mask, target_tokens, target_mask in pair_iter(q_valid, FLAGS.batch_size,
                                                                             FLAGS.input_len, FLAGS.query_len):
-        cost = model.test_engine(sess, source_tokens.T, source_mask.T, target_tokens.T, target_mask.T)
+        cost = model.test(sess, source_tokens.T, source_mask.T, target_tokens.T, target_mask.T)
         valid_costs.append(cost * target_mask.shape[1])
         valid_lengths.append(np.sum(target_mask[1:, :]))
     valid_cost = sum(valid_costs) / float(sum(valid_lengths))
