@@ -67,6 +67,10 @@ tf.app.flags.DEFINE_boolean("co_attn", False, "Whether to use co-attention to en
 tf.app.flags.DEFINE_boolean("seq", False, "Whether to sequence encode")
 tf.app.flags.DEFINE_boolean("cat_attn", False, "Whether to use concatenated representation with decoder attention")
 tf.app.flags.DEFINE_integer("seed", 123, "random seed to use")
+tf.app.flags.DEFINE_boolean("dev", False, "Skip training and generate output files to eval folder")
+tf.app.flags.DEFINE_integer("best_epoch", 0, "Specify the best epoch to use")
+# we want this for precise control, valid cost is not what we want
+tf.app.flags.DEFINE_string("restore_checkpoint", None, "checkpoint file to restore model parameters from")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -82,13 +86,16 @@ EOS_ID = 2
 UNK_ID = 3
 
 
+# load in old model by giving the same train_dir
 def create_model(session, src_vocab_size, tgt_vocab_size, env_vocab_size, forward_only):
     model = rnn_logic.NLCModel(
         src_vocab_size, tgt_vocab_size, env_vocab_size, FLAGS.size, FLAGS.num_layers, FLAGS.max_gradient_norm, FLAGS.batch_size,
         FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.dropout, FLAGS,
         forward_only=forward_only, optimizer=FLAGS.optimizer)
+    # so now we can load safely
     ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-    if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
+    v2_path = ckpt.model_checkpoint_path + ".index" if ckpt else ""
+    if ckpt and (tf.gfile.Exists(ckpt.model_checkpoint_path) or tf.gfile.Exists(v2_path)):
         logging.info("Reading model parameters from %s" % ckpt.model_checkpoint_path)
         model.saver.restore(session, ckpt.model_checkpoint_path)
     else:
@@ -191,7 +198,11 @@ def detokenize(sents, reverse_vocab, decode=False):
 
 
 def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
-                          reverse_tgt_vocab, reverse_env_vocab, save_dir, epoch, sample=5):
+                          reverse_tgt_vocab, reverse_env_vocab, save_dir, epoch, sample=5, print_decode=False):
+
+    # if print_decode=True, we overwrite FLAGS.print_decode
+    # so when flag dev, we don't need to add print_decode
+    print_decode = print_decode if print_decode else FLAGS.print_decode
     num_decoded = 0
 
     # add f1, em measure on this decoding
@@ -242,7 +253,7 @@ def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
                 print("decoded: {}".format(best_str))
                 print("")
 
-            if FLAGS.print_decode:
+            if print_decode:
                 f.write("cmd: {} \r".format(" ".join(src_sent)))
                 f.write("ctx: {} \r".format(" ".join(ctx_env)))
                 f.write("truth: {} \r".format(" ".join(tgt_sent[1:])))
@@ -287,7 +298,7 @@ def train():
 
     if not os.path.exists(FLAGS.train_dir):
         os.makedirs(FLAGS.train_dir)
-    file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))
+    file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))  # this won't override previous log
     logging.getLogger().addHandler(file_handler)
 
     decode_save_dir = pjoin(FLAGS.train_dir, "eval")
@@ -301,90 +312,106 @@ def train():
     with tf.Session() as sess:
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
 
-        # can't load old model, this part is broken but we don't mind right now...
+        # fix the model loading
         model = create_model(sess, len(rev_src_vocab), len(rev_tgt_vocab), len(rev_env_vocab), False)
 
-        logging.info('Initial validation cost: %f' % validate(model, sess, q_valid))
+        # manually load best epoch here
+        if FLAGS.restore_checkpoint is not None:
+            model.saver.restore(sess, FLAGS.restore_checkpoint)
 
-        if False:
-            tic = time.time()
-            params = tf.trainable_variables()
-            num_params = sum(map(lambda t: np.prod(tf.shape(t.value()).eval()), params))
-            toc = time.time()
-            print("Number of params: %d (retreival took %f secs)" % (num_params, toc - tic))
+        if not FLAGS.dev:
 
-        epoch = 0
-        best_epoch = 0
-        previous_losses = []
-        exp_cost = None
-        exp_length = None
-        exp_norm = None
-        while (FLAGS.epochs == 0 or epoch < FLAGS.epochs):
-            epoch += 1
-            current_step = 0
+            logging.info('Initial validation cost: %f' % validate(model, sess, q_valid))
 
-            ## Train
-            epoch_tic = time.time()
-            for source_tokens, source_mask, target_tokens, target_mask, \
-                ctx_tokens, ctx_mask, pred_tokens, pred_mask in pair_iter(q_train, FLAGS.batch_size,
-                                                                                    FLAGS.input_len, FLAGS.query_len):
-                # Get a batch and make a step.
-                tic = time.time()
+            epoch = 0
+            best_epoch = 0
+            previous_losses = []
+            previous_ems = []
+            exp_cost = None
+            exp_length = None
+            exp_norm = None
+            while (FLAGS.epochs == 0 or epoch < FLAGS.epochs):
+                epoch += 1
+                current_step = 0
 
-                grad_norm, cost, param_norm = model.train_engine(sess, source_tokens.T, source_mask.T, ctx_tokens.T,
-                                                                 ctx_mask.T, target_tokens.T, target_mask.T)
+                ## Train
+                epoch_tic = time.time()
+                for source_tokens, source_mask, target_tokens, target_mask, \
+                    ctx_tokens, ctx_mask, pred_tokens, pred_mask in pair_iter(q_train, FLAGS.batch_size,
+                                                                                        FLAGS.input_len, FLAGS.query_len):
+                    # Get a batch and make a step.
+                    tic = time.time()
 
-                toc = time.time()
-                iter_time = toc - tic
-                current_step += 1
+                    grad_norm, cost, param_norm = model.train_engine(sess, source_tokens.T, source_mask.T, ctx_tokens.T,
+                                                                     ctx_mask.T, target_tokens.T, target_mask.T)
 
-                lengths = np.sum(target_mask, axis=0)
-                mean_length = np.mean(lengths)
-                std_length = np.std(lengths)
+                    toc = time.time()
+                    iter_time = toc - tic
+                    current_step += 1
 
-                if not exp_cost:
-                    exp_cost = cost
-                    exp_length = mean_length
-                    exp_norm = grad_norm
+                    lengths = np.sum(target_mask, axis=0)
+                    mean_length = np.mean(lengths)
+                    std_length = np.std(lengths)
+
+                    if not exp_cost:
+                        exp_cost = cost
+                        exp_length = mean_length
+                        exp_norm = grad_norm
+                    else:
+                        exp_cost = 0.99 * exp_cost + 0.01 * cost
+                        exp_length = 0.99 * exp_length + 0.01 * mean_length
+                        exp_norm = 0.99 * exp_norm + 0.01 * grad_norm
+
+                    cost = cost / mean_length
+
+                    if current_step % FLAGS.print_every == 0:
+                        logging.info(
+                            'epoch %d, iter %d, cost %f, exp_cost %f, grad norm %f, param norm %f, batch time %f, length mean/std %f/%f' %
+                            (epoch, current_step, cost, exp_cost / exp_length, grad_norm, param_norm, iter_time,
+                             mean_length,
+                             std_length))
+                epoch_toc = time.time()
+
+                ## Checkpoint
+                checkpoint_path = os.path.join(FLAGS.train_dir, "best.ckpt")
+
+                ## Validate
+                valid_cost = validate(model, sess, q_valid)
+
+                # Validate by decoding
+                f1, em = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+                                               decode_save_dir, epoch, sample=5)
+
+                logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
+
+                logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
+
+                if len(previous_losses) > 2 and valid_cost > previous_losses[-1]:
+                    logging.info("Annealing learning rate by %f" % FLAGS.learning_rate_decay_factor)
+                    sess.run(model.learning_rate_decay_op)
+
+                    # however, if em is improved, we still save the model!
+                    if em > max(previous_ems):
+                        previous_ems.append(em)
+                        model.saver.save(sess, checkpoint_path, global_step=epoch)
+
+                    model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
                 else:
-                    exp_cost = 0.99 * exp_cost + 0.01 * cost
-                    exp_length = 0.99 * exp_length + 0.01 * mean_length
-                    exp_norm = 0.99 * exp_norm + 0.01 * grad_norm
-
-                cost = cost / mean_length
-
-                if current_step % FLAGS.print_every == 0:
-                    logging.info(
-                        'epoch %d, iter %d, cost %f, exp_cost %f, grad norm %f, param norm %f, batch time %f, length mean/std %f/%f' %
-                        (epoch, current_step, cost, exp_cost / exp_length, grad_norm, param_norm, iter_time,
-                         mean_length,
-                         std_length))
-            epoch_toc = time.time()
-
-            ## Checkpoint
-            checkpoint_path = os.path.join(FLAGS.train_dir, "best.ckpt")
-
-            ## Validate
+                    previous_ems.append(em)
+                    previous_losses.append(valid_cost)
+                    best_epoch = epoch
+                    model.saver.save(sess, checkpoint_path, global_step=epoch)
+                sys.stdout.flush()
+        else:
+            # dev mode, we print out validation to "eval" folder
             valid_cost = validate(model, sess, q_valid)
+
+            logging.info("Final Validation cost: %f" % valid_cost)
 
             # Validate by decoding
             f1, em = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
-                                           decode_save_dir, epoch, sample=5)
-
-            logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
-
+                                           decode_save_dir, FLAGS.best_epoch, sample=5, print_decode=True)
             logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
-
-            if len(previous_losses) > 2 and valid_cost > previous_losses[-1]:
-                logging.info("Annealing learning rate by %f" % FLAGS.learning_rate_decay_factor)
-                sess.run(model.learning_rate_decay_op)
-                model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
-            else:
-                previous_losses.append(valid_cost)
-                best_epoch = epoch
-                model.saver.save(sess, checkpoint_path, global_step=epoch)
-            sys.stdout.flush()
-
 
 def main(_):
     train()
