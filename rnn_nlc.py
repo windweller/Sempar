@@ -108,7 +108,7 @@ class NLCModel(object):
         for i in xrange(num_layers):
             self.decoder_state_input.append(tf.placeholder(tf.float32, shape=[None, size]))
 
-        with tf.variable_scope("NLC", initializer=tf.uniform_unit_scaling_initializer(1.0)):
+        with tf.variable_scope("NLC", initializer=tf.uniform_unit_scaling_initializer(1.0, seed=self.FLAGS.seed)):
             self.setup_embeddings()
             self.setup_encoder()
             self.setup_decoder()
