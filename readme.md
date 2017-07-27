@@ -20,8 +20,8 @@ the context as well. Q2L means "Query to Logical parse"
 
 | Model Type    | EM            | F1    | param_size |
 | ------------- |:-------------:| :-----:| :-----: |
-| no context (Q2L) | 55.90   |  92.81  | 1.84M |
-| seq      |   **59.91**    |  94.27   | 2.63M |
+| no context (Q2L) | **55.90**   |  **92.81**  | 1.84M |
+| seq      |   53.89    |  92.28   | 2.63M |
 | attn     |   6.74    |  69.61   | 1.97M  |
 | concat-attn  |   49.47    |   91.88    | 2.63M |
 | co-attn      |   51.48    |  92.08   | 3.42M |
