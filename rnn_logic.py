@@ -119,26 +119,24 @@ class NLCModel(object):
         for i in xrange(num_layers):
             self.decoder_state_input.append(tf.placeholder(tf.float32, shape=[None, size]))
 
-        if self.task == "context":
-            # adding seed, now we fixed the randomness
-            with tf.variable_scope("CtxLogic", initializer=tf.uniform_unit_scaling_initializer(1.0, seed=self.FLAGS.seed)):
-                self.setup_embeddings()
-                self.setup_encoder()
-                # this should be fine...
-                if FLAGS.co_attn:
-                    self.encoder_output = self.rev_coattn_encode()
-                elif FLAGS.seq:
-                    self.encoder_output = self.sequence_encode()
-                elif FLAGS.cat_attn:
-                    self.encoder_output = self.concate_encode()
-                else:
-                    self.encoder_output = self.rev_attention_encode()  # ha, attention is the "normal" case
-                self.setup_decoder(self.encoder_output)
-                self.setup_loss()
+        # adding seed, now we fixed the randomness
+        with tf.variable_scope("Logic", initializer=tf.uniform_unit_scaling_initializer(1.0, seed=self.FLAGS.seed)):
+            self.setup_embeddings()
+            self.setup_encoder()
+            # this should be fine...
+            if FLAGS.co_attn:
+                self.encoder_output = self.rev_coattn_encode()
+            elif FLAGS.seq:
+                self.encoder_output = self.sequence_encode()
+            elif FLAGS.cat_attn:
+                self.encoder_output = self.concate_encode()
+            else:
+                self.encoder_output = self.rev_attention_encode()  # ha, attention is the "normal" case
+            self.setup_decoder(self.encoder_output)
+            self.setup_loss()
 
-                self.setup_beam()
-        else:
-            raise Exception("unimplemented")
+            self.setup_beam()
+
 
         params = tf.trainable_variables()
         if not forward_only:

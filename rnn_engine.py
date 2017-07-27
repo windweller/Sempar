@@ -97,8 +97,6 @@ class NLCModel(object):
         self.learning_rate_decay_op = self.learning_rate.assign(self.learning_rate * learning_rate_decay_factor)
         self.global_step = tf.Variable(0, trainable=False)
 
-        self.task = FLAGS.task
-
         self.keep_prob = tf.placeholder(tf.float32)
         self.source_tokens = tf.placeholder(tf.int32, shape=[None, None], name="source_tokens")
         # self.target_tokens = tf.placeholder(tf.int32, shape=[None, None], name="target_tokens")
@@ -119,28 +117,25 @@ class NLCModel(object):
         for i in xrange(num_layers):
             self.decoder_state_input.append(tf.placeholder(tf.float32, shape=[None, size]))
 
-        if self.task == "context":
-            with tf.variable_scope("CtxPred", initializer=tf.uniform_unit_scaling_initializer(1.0, seed=self.FLAGS.seed)):
-                self.setup_embeddings()
-                self.setup_encoder()
-                # this should be fine...
-                if FLAGS.co_attn:
-                    self.encoder_output = self.coattn_encode()
-                elif FLAGS.seq:
-                    self.encoder_output = self.sequence_encode()
-                elif FLAGS.no_query:
-                    # this is the null hypothesis
-                    self.encoder_output = self.no_query_encode()
-                elif FLAGS.cat_attn:
-                    self.encoder_output = self.concate_encode()
-                else:
-                    self.encoder_output = self.attention_encode()
-                self.setup_decoder(self.encoder_output)
-                self.setup_loss()
+        with tf.variable_scope("CtxPred", initializer=tf.uniform_unit_scaling_initializer(1.0, seed=self.FLAGS.seed)):
+            self.setup_embeddings()
+            self.setup_encoder()
+            # this should be fine...
+            if FLAGS.co_attn:
+                self.encoder_output = self.coattn_encode()
+            elif FLAGS.seq:
+                self.encoder_output = self.sequence_encode()
+            elif FLAGS.no_query:
+                # this is the null hypothesis
+                self.encoder_output = self.no_query_encode()
+            elif FLAGS.cat_attn:
+                self.encoder_output = self.concate_encode()
+            else:
+                self.encoder_output = self.attention_encode()
+            self.setup_decoder(self.encoder_output)
+            self.setup_loss()
 
-                self.setup_beam()
-        else:
-            raise Exception("unimplemented")
+            self.setup_beam()
 
         params = tf.trainable_variables()
         if not forward_only:
