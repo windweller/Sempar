@@ -208,6 +208,7 @@ def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
     # add f1, em measure on this decoding
     f1 = 0.
     em = 0.
+    saved_list = []
 
     # since we did beam-decode, I can measure EM on the top-5 result
     # can split pred / context vocab as well...but it feels like a trick
@@ -260,6 +261,13 @@ def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
                 f.write("decoded: {} \r".format(best_str))
                 f.write("\r")
                 f.write("\r")
+                saved_list.append({"cmd": src_sent,
+                                   "ctx": ctx_env,
+                                   "truth": tgt_sent[1:],
+                                   "decoded": best_str})
+        if print_decode:
+            with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
+                pickle.dump(saved_list, f)
 
     return float(f1) / float(num_decoded), float(em) / float(num_decoded)
 
