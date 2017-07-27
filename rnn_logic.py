@@ -97,8 +97,6 @@ class NLCModel(object):
         self.learning_rate_decay_op = self.learning_rate.assign(self.learning_rate * learning_rate_decay_factor)
         self.global_step = tf.Variable(0, trainable=False)
 
-        self.task = FLAGS.task
-
         self.keep_prob = tf.placeholder(tf.float32)
         self.source_tokens = tf.placeholder(tf.int32, shape=[None, None], name="source_tokens")
         self.target_tokens = tf.placeholder(tf.int32, shape=[None, None], name="target_tokens")
