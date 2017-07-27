@@ -65,6 +65,7 @@ tf.app.flags.DEFINE_integer("beam_size", 3, "Size of beam.")
 tf.app.flags.DEFINE_boolean("print_decode", False, "print decoding result to file. Is slow.")
 tf.app.flags.DEFINE_boolean("co_attn", False, "Whether to use co-attention to encode")
 tf.app.flags.DEFINE_boolean("seq", False, "Whether to use RNN to sequentially encode")
+tf.app.flags.DEFINE_boolean("cat_attn", False, "Whether to use concatenated representation with decoder attention")
 tf.app.flags.DEFINE_boolean("no_query", False, "Whether not to use natural language query input")
 tf.app.flags.DEFINE_integer("seed", 123, "random seed to use")
 tf.app.flags.DEFINE_boolean("dev", False, "Skip training and generate output files to eval folder")
@@ -289,11 +290,6 @@ def train():
     logging.info("Source vocabulary size: %d" % len(rev_src_vocab))
     logging.info("Target vocabulary size: %d" % len(rev_tgt_vocab))
     logging.info("Env vocabulary size: %d" % len(rev_env_vocab))
-
-    if not os.path.exists(FLAGS.train_dir):
-        os.makedirs(FLAGS.train_dir)
-    file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))
-    logging.getLogger().addHandler(file_handler)
 
     decode_save_dir = pjoin(FLAGS.train_dir, "eval")
     if not os.path.exists(decode_save_dir):

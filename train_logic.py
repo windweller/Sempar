@@ -296,11 +296,6 @@ def train():
     logging.info("Target vocabulary size: %d" % len(rev_tgt_vocab))
     logging.info("Env vocabulary size: %d" % len(rev_env_vocab))
 
-    if not os.path.exists(FLAGS.train_dir):
-        os.makedirs(FLAGS.train_dir)
-    file_handler = logging.FileHandler("{0}/log.txt".format(FLAGS.train_dir))  # this won't override previous log
-    logging.getLogger().addHandler(file_handler)
-
     decode_save_dir = pjoin(FLAGS.train_dir, "eval")
     if not os.path.exists(decode_save_dir):
         os.makedirs(decode_save_dir)
