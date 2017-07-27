@@ -13,6 +13,27 @@ We build four types of models:
 4. Concatenated Attention Decoder Model (without multihead attention)
 5. Concatenated Multi-head Attention Decoder Model (Transformer) (not yet implemented)
 
+## Task: RNN_Logic
+
+We generate the logical form conditioned not just on the input query, but on
+the context as well. Q2L means "Query to Logical parse"
+
+| Model Type    | EM            | F1    | param_size |
+| ------------- |:-------------:| :-----:| :-----: |
+| no context (Q2L) | 55.90   |  92.81  | 1.84M |
+| seq      |   **59.91**    |  94.27   | 2.63M |
+| attn     |   6.74    |  69.61   | 1.97M  |
+| concat-attn  |   49.47    |   91.88    | 2.63M |
+| co-attn      |   51.48    |  92.08   | 3.42M |
+
+All models report their best EM/F1 under optimal settings.
+
+- no context (Q2L): size 256, 20 epochs
+- Seq: size 256, 15 epochs
+- Attn: size 256, 20 epochs
+- concat-attn: 256, 25 epochs
+- co-attn: 256, 35 epochs
+
 ## Task: RNN_Engine
 
 We directly predict the output of a query from the context.
@@ -38,26 +59,3 @@ All models report their best EM/F1 under optimal settings.
 
 (note that co-attn could be under-trained because the parameter size, but size=256 outperforms size=128,
 could try size=175)
-
-
-## Task: RNN_Logic
-
-We generate the logical form conditioned not just on the input query, but on
-the context as well. Q2L means "Query to Logical parse"
-
-| Model Type    | EM            | F1    | param_size |
-| ------------- |:-------------:| :-----:| :-----: |
-| no context (Q2L) | 55.90   |  92.81  | 1.84M |
-| seq      |   **59.91**    |  94.27   | 2.63M |
-| attn     |   6.74    |  69.61   | 1.97M  |
-| concat-attn  |   49.47    |   91.88    | 2.63M |
-| co-attn      |   51.48    |  92.08   | 3.42M |
-
-All models report their best EM/F1 under optimal settings.
-
-- no context (Q2L): size 256, 20 epochs
-- Seq: size 256, 15 epochs
-- Attn: size 256, 20 epochs
-- concat-attn: 256, 25 epochs
-- co-attn: 256, 35 epochs
-
