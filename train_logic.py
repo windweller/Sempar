@@ -253,22 +253,27 @@ def decode_validate_logic(model, sess, q_valid, reverse_src_vocab,
                 logging.info("decoded: {}".format(best_str))
                 logging.info("")
 
-            if print_decode:
-                f.write("cmd: {} \r".format(" ".join(src_sent)))
-                f.write("ctx: {} \r".format(" ".join(ctx_env)))
-                f.write("truth: {} \r".format(" ".join(tgt_sent[1:])))
-                f.write("decoded: {} \r".format(best_str))
-                f.write("\r")
-                f.write("\r")
-                saved_list.append({"cmd": src_sent,
-                                   "ctx": ctx_env,
-                                   "truth": tgt_sent[1:],
-                                   "decoded": best_str})
-    if print_decode:
-        with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
-            pickle.dump(saved_list, f)
+            saved_list.append({"cmd": src_sent,
+                               "ctx": ctx_env,
+                               "truth": tgt_sent[1:],
+                               "decoded": best_str})
 
-    return float(f1) / float(num_decoded), float(em) / float(num_decoded)
+    return float(f1) / float(num_decoded), float(em) / float(num_decoded), saved_list
+
+
+def print_to_pickle(saved_list, save_dir, epoch):
+    # pickle is always saved, txt file is optional
+    with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
+        pickle.dump(saved_list, f)
+
+    if FLAGS.print_decode:
+        with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".txt"), "wb") as f:
+            for d in saved_list:
+                f.write("cmd: {} \r".format(" ".join(d['cmd'])))
+                f.write("ctx: {} \r".format(" ".join(d['ctx'])))
+                f.write("truth: {} \r".format(" ".join(d['truth'])))
+                f.write("decoded: {} \r".format(d['decoded']))
+                f.write("\r")
 
 
 def train():
@@ -382,7 +387,7 @@ def train():
                 valid_cost = validate(model, sess, q_valid)
 
                 # Validate by decoding
-                f1, em = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+                f1, em, saved_list = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
                                                decode_save_dir, epoch, sample=5)
 
                 logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
@@ -404,15 +409,20 @@ def train():
                     previous_losses.append(valid_cost)
                     best_epoch = epoch
                     model.saver.save(sess, checkpoint_path, global_step=epoch)
+
+                    logging.info("saving decoding result to pickle...")
+                    print_to_pickle(saved_list, decode_save_dir, epoch)
                 sys.stdout.flush()
         else:
+            # dev mode is broken right now...so don't bother
+
             # dev mode, we print out validation to "eval" folder
             valid_cost = validate(model, sess, q_valid)
 
             logging.info("Final Validation cost: %f" % valid_cost)
 
             # Validate by decoding
-            f1, em = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+            f1, em, saved_list = decode_validate_logic(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
                                            decode_save_dir, FLAGS.best_epoch, sample=5, print_decode=True)
             logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
 

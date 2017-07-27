@@ -248,22 +248,26 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
                 logging.info("decoded: {}".format(best_str))
                 logging.info("")
 
-            if print_decode:
-                f.write("cmd: {} \r".format(" ".join(src_sent)))
-                f.write("ctx: {} \r".format(" ".join(ctx_env)))
-                f.write("truth: {} \r".format(" ".join(pred_env)[1:]))
-                f.write("decoded: {} \r".format(best_str))
-                f.write("\r")
-                f.write("\r")
-                saved_list.append({"cmd":src_sent,
-                                   "ctx":ctx_env,
-                                   "truth":pred_env[1:],
-                                   "decoded":best_str})
-    if print_decode:
-        with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
-            pickle.dump(saved_list, f)  # save pickle file here as well
+            saved_list.append({"cmd":src_sent,
+                               "ctx":ctx_env,
+                               "truth":pred_env[1:],
+                               "decoded":best_str})
 
     return float(f1) / float(num_decoded), float(em) / float(num_decoded)
+
+
+def print_to_pickle(saved_list, save_dir, epoch):
+    with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
+        pickle.dump(saved_list, f)
+
+    if FLAGS.print_decode:
+        with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".txt"), "wb") as f:
+            for d in saved_list:
+                f.write("cmd: {} \r".format(" ".join(d['cmd'])))
+                f.write("ctx: {} \r".format(" ".join(d['ctx'])))
+                f.write("truth: {} \r".format(" ".join(d['truth'])))
+                f.write("decoded: {} \r".format(d['decoded']))
+                f.write("\r")
 
 
 def train():
