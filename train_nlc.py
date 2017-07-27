@@ -258,7 +258,7 @@ def train():
     if not os.path.exists(decode_save_dir):
         os.makedirs(decode_save_dir)
 
-    print(vars(FLAGS))
+    logging.info(vars(FLAGS))
     with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
         json.dump(FLAGS.__flags, fout)
 
