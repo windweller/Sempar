@@ -253,7 +253,7 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
                                "truth":pred_env[1:],
                                "decoded":best_str})
 
-    return float(f1) / float(num_decoded), float(em) / float(num_decoded)
+    return float(f1) / float(num_decoded), float(em) / float(num_decoded), saved_list
 
 
 def print_to_pickle(saved_list, save_dir, epoch):
@@ -388,7 +388,7 @@ def train():
                 valid_cost = validate(model, sess, q_valid)
 
                 # Validate by decoding
-                f1, em = decode_validate_engine(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+                f1, em, saved_list = decode_validate_engine(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
                                                 decode_save_dir, epoch, sample=5)
 
                 logging.info("Epoch %d Validation cost: %f time: %f" % (epoch, valid_cost, epoch_toc - epoch_tic))
@@ -402,6 +402,10 @@ def train():
                     if em > max(previous_ems):
                         previous_ems.append(em)
                         model.saver.save(sess, checkpoint_path, global_step=epoch)
+
+                        logging.info("saving decoding result to pickle...")
+                        print_to_pickle(saved_list, decode_save_dir, epoch)
+
                     model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
                 else:
                     previous_ems.append(em)
@@ -416,7 +420,7 @@ def train():
             logging.info("Final Validation cost: %f" % valid_cost)
 
             # Validate by decoding
-            f1, em = decode_validate_engine(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+            f1, em, saved_list = decode_validate_engine(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
                                            decode_save_dir, FLAGS.best_epoch, sample=5, print_decode=True)
             logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
 

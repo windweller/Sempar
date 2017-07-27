@@ -403,6 +403,9 @@ def train():
                         previous_ems.append(em)
                         model.saver.save(sess, checkpoint_path, global_step=epoch)
 
+                        logging.info("saving decoding result to pickle...")
+                        print_to_pickle(saved_list, decode_save_dir, epoch)
+
                     model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
                 else:
                     previous_ems.append(em)

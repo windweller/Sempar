@@ -297,6 +297,7 @@ def train():
             epoch = 0
             best_epoch = 0
             previous_losses = []
+            previous_ems = []
             exp_cost = None
             exp_length = None
             exp_norm = None
@@ -356,8 +357,17 @@ def train():
                 if len(previous_losses) > 2 and valid_cost > previous_losses[-1]:
                     logging.info("Annealing learning rate by %f" % FLAGS.learning_rate_decay_factor)
                     sess.run(model.learning_rate_decay_op)
+
+                    if em > max(previous_ems):
+                        previous_ems.append(em)
+                        model.saver.save(sess, checkpoint_path, global_step=epoch)
+
+                        logging.info("saving decoding result to pickle...")
+                        print_to_pickle(saved_list, decode_save_dir, epoch)
+
                     model.saver.restore(sess, checkpoint_path + ("-%d" % best_epoch))
                 else:
+                    previous_ems.append(em)
                     previous_losses.append(valid_cost)
                     best_epoch = epoch
                     model.saver.save(sess, checkpoint_path, global_step=epoch)
