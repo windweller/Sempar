@@ -273,7 +273,7 @@ def train():
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
 
         # can't load old model, this part is broken but we don't mind right now...
-        model = create_model(sess, len(rev_src_vocab), len(rev_tgt_vocab), False)
+        model = create_model(sess, len(rev_src_vocab), len(rev_tgt_vocab), FLAGS.dev)
 
         # manually load best epoch here
         if FLAGS.restore_checkpoint is not None:

@@ -315,7 +315,8 @@ def train():
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
 
         # fix the model loading
-        model = create_model(sess, len(rev_src_vocab), len(rev_tgt_vocab), len(rev_env_vocab), False)
+        # so if FLAGS.dev, then we don't create ADAM variables (a temporary fix maybe)
+        model = create_model(sess, len(rev_src_vocab), len(rev_tgt_vocab), len(rev_env_vocab), FLAGS.dev)
 
         # manually load best epoch here
         if FLAGS.restore_checkpoint is not None:
