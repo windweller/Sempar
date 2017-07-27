@@ -260,9 +260,9 @@ def decode_validate_engine(model, sess, q_valid, reverse_src_vocab,
                                    "ctx":ctx_env,
                                    "truth":pred_env[1:],
                                    "decoded":best_str})
-        if print_decode:
-            with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
-                pickle.dump(saved_list, f)  # save pickle file here as well
+    if print_decode:
+        with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".pkl"), "wb") as f:
+            pickle.dump(saved_list, f)  # save pickle file here as well
 
     return float(f1) / float(num_decoded), float(em) / float(num_decoded)
 
