@@ -311,7 +311,7 @@ def train():
     with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
         json.dump(FLAGS.__flags, fout)
 
-    with tf.Session() as sess:
+    with tf.Graph().as_default(), tf.Session() as sess:
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
 
         # fix the model loading

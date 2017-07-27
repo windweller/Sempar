@@ -307,7 +307,7 @@ def train():
         json.dump(FLAGS.__flags, fout)
 
     # TODO: fix random seed
-    with tf.Session() as sess:
+    with tf.Graph().as_default(), tf.Session() as sess:
         logging.info("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
 
         # can't load old model, this part is broken but we don't mind right now...
