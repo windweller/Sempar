@@ -229,8 +229,7 @@ def print_to_pickle(saved_list, save_dir, epoch):
     if FLAGS.print_decode:
         with open(pjoin(save_dir, "valid_decode_e" + str(epoch) + ".txt"), "wb") as f:
             for d in saved_list:
-                f.write("cmd: {} \r".format(" ".join(d['cmd'])))
-                f.write("ctx: {} \r".format(" ".join(d['ctx'])))
+                f.write("input: {} \r".format(" ".join(d['input'])))
                 f.write("truth: {} \r".format(" ".join(d['truth'])))
                 f.write("decoded: {} \r".format(d['decoded']))
                 f.write("\r")
