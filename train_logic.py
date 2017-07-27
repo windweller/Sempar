@@ -93,15 +93,9 @@ def create_model(session, src_vocab_size, tgt_vocab_size, env_vocab_size, forwar
         FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.dropout, FLAGS,
         forward_only=forward_only, optimizer=FLAGS.optimizer)
     # so now we can load safely
-    ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-    v2_path = ckpt.model_checkpoint_path + ".index" if ckpt else ""
-    if ckpt and (tf.gfile.Exists(ckpt.model_checkpoint_path) or tf.gfile.Exists(v2_path)):
-        logging.info("Reading model parameters from %s" % ckpt.model_checkpoint_path)
-        model.saver.restore(session, ckpt.model_checkpoint_path)
-    else:
-        logging.info("Created model with fresh parameters.")
-        session.run(tf.initialize_all_variables())
-        logging.info('Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables()))
+    logging.info("Created model with fresh parameters.")
+    session.run(tf.initialize_all_variables())
+    logging.info('Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables()))
     return model
 
 
