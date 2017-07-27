@@ -197,7 +197,7 @@ class NLCModel(object):
         return query_w_matrix
 
     def no_query_encode(self):
-        context_w_matrix = self.normal_encode(self.ctx_tokens, self.ctx_mask, scope_name="Ctx")
+        context_w_matrix = self.normal_encode(self.ctx_inputs, self.ctx_mask, scope_name="Ctx")
         return context_w_matrix
 
     def coattn_encode(self):
