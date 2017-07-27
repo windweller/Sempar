@@ -2,7 +2,11 @@
 
 Currently use `train_nlc.py` or `train_engine.py`
 
-The way to use `train_engine.py` is:
+Call evaluation by:
+
+```cmd
+CUDA_VISIBLE_DEVICES=0 python train_logic.py --train_dir sandbox/rnn_logic_seq_256_d15 --size 256 --dev True --best_epoch 13 --restore_checkpoint sandbox/rnn_logic_seq_256_d15/best.ckpt-13
+```
 
 ## Model
 
@@ -34,6 +38,9 @@ All models report their best EM/F1 under optimal settings.
 - concat-attn: 256, 25 epochs
 - co-attn: 256, 35 epochs
 
+![alt text](https://github.com/windweller/Sempar/raw/master/rnn_logic.png "RNN Logic EM validation plot")
+
+
 ## Task: RNN_Engine
 
 We directly predict the output of a query from the context.
@@ -59,3 +66,5 @@ All models report their best EM/F1 under optimal settings.
 
 (note that co-attn could be under-trained because the parameter size, but size=256 outperforms size=128,
 could try size=175)
+
+![alt text](https://github.com/windweller/Sempar/raw/master/rnn_engine.png "RNN Engine EM validation plot")
