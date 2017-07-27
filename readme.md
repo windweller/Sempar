@@ -1,42 +1,3 @@
-## Implementation
-
-`train.py` is the main training file. The architecture is very similar to my CS224N's Reading Comprehension code.
-
- `python train.py` will launch the training, can finish in 3-4 minutes.
-
- `data` folder has processed queries. Naturalization brings a lot of unbalance to
- the task, and Seq2Seq model doesn't handle unbalanced source/target pair well.
-
- In order to tackle unbalancedness, we compute a simple ratio over the charatecter
- length of sequence, and exclude sequence where `target / source <= 15`
-
- This gives us 31994 pairs of training data, out of 36589 (87.44%). Many of these pairs have a one-to-many mapping
- (one input maps to multiple repeating parses). We only take one parse (since model can simply output a number to indicate
- how many repeating parse there should be). We call these `trimmed_q` in `data` folder.
-
- We construct another smaller dataset `small_q` strictly for one-to-one mapping (one input only generates
- one parse), and there are 14051 pairs.
-
- Both encoder and decoder have one layer, no outside embedding is used.  Decoder has attention (source-to-target attention).
-  Vocabulary size is very small: 297 (this includes
- many markers like "[", "*", "/"), one can find them in `data/vocab.dat`.
-
- We use F1 and EM (exact match) score to evaluate success. F1 ignores order and just compare how many
- words are overlapping, EM considers whole sequence to match.
-
- The training loss (sequence-to-sequence loss) goes down from 10.780951 to 1.112809, but the F1 score only
- goes up slightly: 0.013 to 0.022, EM score remains 0.0.
-
- An example output is as follows:
-
-```
-input: d blue
-
-decoded result: up plate w bottom c repeat call 10 of g height
-
-ground truth result: isolate s select call adj bot this add blue here
-```
-
 ## Usage
 
 Currently use `train_nlc.py` or `train_engine.py`
@@ -86,15 +47,15 @@ the context as well. Q2L means "Query to Logical parse"
 
 | Model Type    | EM            | F1    | param_size |
 | ------------- |:-------------:| :-----:| :-----: |
-| no context (Q2L) | 55.58   |  92.72  | 1.84M |
+| no context (Q2L) | 55.90   |  92.81  | 1.84M |
 | seq      |   **59.91**    |  94.27   | 2.63M |
-| attn     |   xxx    |  xxx   | xxx  |
+| attn     |   6.74    |  69.61   | 1.97M  |
 | concat-attn  |   49.47    |   91.88    | 2.63M |
 | co-attn      |   51.48    |  92.08   | 3.42M |
 
 All models report their best EM/F1 under optimal settings.
 
-- no context (Q2L): size 256, 10 epochs (20 epochs running...)
+- no context (Q2L): size 256, 20 epochs
 - Seq: size 256, 15 epochs
 - Attn: size 256, 20 epochs
 - concat-attn: 256, 25 epochs
