@@ -69,7 +69,7 @@ tf.app.flags.DEFINE_integer("seed", 123, "random seed to use")
 tf.app.flags.DEFINE_boolean("dev", False, "Skip training and generate output files to eval folder")
 tf.app.flags.DEFINE_integer("best_epoch", 0, "Specify the best epoch to use")
 # we want this for precise control, valid cost is not what we want
-tf.app.flags.DEFINE_string("restore_checkpoint", None, "checkpoint file to restore model parameters from")
+tf.app.flags.DEFINE_string("restore_checkpoint", None, "checkpoint file to restore model parameters from, without ckpt suffix")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -320,7 +320,8 @@ def train():
 
         # manually load best epoch here
         if FLAGS.restore_checkpoint is not None:
-            model.saver.restore(sess, FLAGS.restore_checkpoint)
+            saver = tf.train.import_meta_graph(FLAGS.restore_checkpoint + ".meta")
+            saver.restore(sess, FLAGS.restore_checkpoint + ".ckpt")
 
         if not FLAGS.dev:
             logging.info('Initial validation cost: %f' % validate(model, sess, q_valid))
