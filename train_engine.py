@@ -412,6 +412,9 @@ def train():
                     previous_losses.append(valid_cost)
                     best_epoch = epoch
                     model.saver.save(sess, checkpoint_path, global_step=epoch)
+                    logging.info("saving decoding result to pickle...")
+                    print_to_pickle(saved_list, decode_save_dir, epoch)
+
                 sys.stdout.flush()
         else:
             # dev mode, we print out validation to "eval" folder
