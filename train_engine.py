@@ -288,15 +288,20 @@ def train():
     if dataset == "shrdlurn":
         pkl_train_name = pjoin("data", dataset, "tokenized_s_train.pkl")
         pkl_val_name = pjoin("data", dataset, "tokenized_s_val.pkl")
+        pkl_test_name = pjoin("data", dataset, "tokenized_s_test.pkl")
     elif dataset == 'nat':
         pkl_train_name = pjoin("data", dataset, "trimmed_q_train.pkl")
         pkl_val_name = pjoin("data", dataset, "trimmed_q_val.pkl")
+        pkl_test_name = pjoin("data", dataset, "trimmed_q_test.pkl")
 
     with open(pkl_train_name, "rb") as f:
         q_train = pickle.load(f)
 
     with open(pkl_val_name, "rb") as f:
         q_valid = pickle.load(f)
+
+    with open(pkl_test_name, "rb") as f:
+        q_test = pickle.load(f)
 
     logging.info("Source vocabulary size: %d" % len(rev_src_vocab))
     logging.info("Target vocabulary size: %d" % len(rev_tgt_vocab))
@@ -418,14 +423,14 @@ def train():
                 sys.stdout.flush()
         else:
             # dev mode, we print out validation to "eval" folder
-            valid_cost = validate(model, sess, q_valid)
+            valid_cost = validate(model, sess, q_test)
 
-            logging.info("Final Validation cost: %f" % valid_cost)
+            logging.info("Final Test cost: %f" % q_test)
 
             # Validate by decoding
-            f1, em, saved_list = decode_validate_engine(model, sess, q_valid, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
+            f1, em, saved_list = decode_validate_engine(model, sess, q_test, rev_src_vocab, rev_tgt_vocab, rev_env_vocab,
                                            decode_save_dir, FLAGS.best_epoch, sample=5, print_decode=True)
-            logging.info("Validation F1 score: {}, EM score: {}".format(f1, em))
+            logging.info("Test F1 score: {}, EM score: {}".format(f1, em))
 
 
 def main(_):
