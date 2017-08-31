@@ -68,3 +68,6 @@ All models report their best EM/F1 under optimal settings.
 could try size=175)
 
 ![alt text](https://github.com/windweller/Sempar/raw/master/rnn_engine.png "RNN Engine EM validation plot")
+
+## Error Analysis
+
