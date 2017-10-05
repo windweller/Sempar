@@ -38,7 +38,7 @@ All models report their best EM/F1 under optimal settings.
 - concat-attn: 256, 25 epochs
 - co-attn: 256, 35 epochs
 
-![alt text](https://github.com/windweller/Sempar/raw/master/rnn_logic.png "RNN Logic EM validation plot")
+![alt text](https://github.com/windweller/Sempar/raw/master/rnn_logic_fig.png "RNN Logic EM validation plot")
 
 
 ## Task: RNN_Engine
